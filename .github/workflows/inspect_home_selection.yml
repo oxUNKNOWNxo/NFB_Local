@@ -20,17 +20,17 @@ jobs:
           mkdir extracted
           unzip -q base.tipa -d extracted
           APP=$(find extracted/Payload -maxdepth 2 -type d -name '*.app' | head -n1)
-          BIN="$APP/Twitter"
+          BIN="$APP/Frameworks/TFNUISwift.framework/TFNUISwift"
           test -f "$BIN"
           echo "binary=$BIN" >> "$GITHUB_ENV"
 
-      - name: Inspect selection APIs
+      - name: Inspect LegacySegmentedViewController
         run: |
           set -euo pipefail
-          PATTERN='LegacySegmented|selected(Index|Tab|ViewController)|setSelected|select[A-Za-z]*.*(Index|Tab|ViewController)|initiallySelected|current(Index|Tab|ViewController)|setCurrent|scroll[A-Za-z]*.*(Index|Page|ViewController)|page(Index|ViewController)|displayed(Index|ViewController)|visible(Index|ViewController)'
+          PATTERN='LegacySegmented|selected(Index|Tab|ViewController)|setSelected|select[A-Za-z]*.*(Index|Tab|ViewController)|initiallySelected|current(Index|Tab|ViewController)|setCurrent|scroll[A-Za-z]*.*(Index|Page|ViewController)|page(Index|ViewController)|displayed(Index|ViewController)|visible(Index|ViewController)|selectionOfItem'
           echo '=== Printable selection strings ==='
           strings "$binary" | grep -Ei "$PATTERN" | sort -u | head -n 2500 || true
           echo '=== Objective-C selection method names ==='
           otool -v -s __TEXT __objc_methname "$binary" 2>/dev/null | grep -Ei "$PATTERN" | head -n 3000 || true
-          echo '=== Legacy segmented metadata vicinity ==='
-          otool -ov "$binary" 2>/dev/null | grep -B 12 -A 80 -E 'LegacySegmentedViewController|LegacySegmentedViewControllerDelegate|LegacySegmentedViewControllerDataSource' | head -n 4000 || true
+          echo '=== LegacySegmentedViewController class metadata ==='
+          otool -ov "$binary" 2>/dev/null | grep -B 20 -A 220 -E '_TtC10TFNUISwift29LegacySegmentedViewController|LegacySegmentedViewController$' | head -n 5000 || true
