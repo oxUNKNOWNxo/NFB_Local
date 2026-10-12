@@ -11,6 +11,7 @@
 // MARK: - Home timeline tabs
 
 static __weak id ActiveHomeTimelineContainer;
+static char HomeInitialSelectionFixedKey;
 static NSString* const HomeTimelineTabSelectionKey =
     @"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier";
 
@@ -25,11 +26,9 @@ static NSInteger HomeSourceTabIndex(NSInteger visibleIndex) {
     return visibleIndex + 1;
 }
 
-// With For You removed, visible index 0 already maps to source index 1
-// (Following). Persisting the original `latest`/source-index selection makes X
-// restore index 1 on the shortened tab strip, which points at the next pinned
-// timeline. Keep the hidden-mode selection unset so X starts from visible index
-// 0 and the data-source remap supplies Following.
+// With For You removed, visible index 0 maps to source index 1 (Following).
+// Keep the old persisted identifier cleared so it cannot compete with the
+// visible-index selection owned by LegacySegmentedViewController.
 static void ClearHiddenHomeSelection(void) {
     if (!HideForYouEnabled()) {
         return;
@@ -45,9 +44,21 @@ static void ReloadHomeTimelineTabs(id container) {
 
     id segmentedController =
         ((id (*)(id, SEL))objc_msgSend)(container, @selector(segmentedViewController));
-    if ([segmentedController respondsToSelector:@selector(reloadData)]) {
+
+    // X 12.31.1 exposes reloadDataWithSelectingIndex: on the legacy segmented
+    // controller. The controller keeps its own visible index independently of
+    // THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier,
+    // which is why merely clearing that preference still reopened visible index
+    // 1. When For You is hidden, explicitly reload at visible index 0; the data
+    // source remap below turns that into source index 1 (Following).
+    if (HideForYouEnabled() &&
+        [segmentedController respondsToSelector:@selector(reloadDataWithSelectingIndex:)]) {
+        ((void (*)(id, SEL, NSInteger))objc_msgSend)(
+            segmentedController, @selector(reloadDataWithSelectingIndex:), 0);
+    } else if ([segmentedController respondsToSelector:@selector(reloadData)]) {
         ((void (*)(id, SEL))objc_msgSend)(segmentedController, @selector(reloadData));
     }
+
     if ([segmentedController respondsToSelector:@selector(view)]) {
         UIView* view = ((id (*)(id, SEL))objc_msgSend)(segmentedController, @selector(view));
         [view setNeedsLayout];
@@ -58,6 +69,10 @@ void applyHideForYouSetting(void) {
     id container = ActiveHomeTimelineContainer;
     if (HideForYouEnabled()) {
         ClearHiddenHomeSelection();
+        if (container) {
+            objc_setAssociatedObject(
+                container, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
     }
     ReloadHomeTimelineTabs(container);
 }
@@ -122,8 +137,9 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 // handing it an empty array hides the tabs without touching persisted state.
 %hook _TtC32TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
 
-// Clear the source-index selection before X restores the home tab. Once For You
-// is removed, the first visible tab is Following and must be selected as index 0.
+// Clear the old persisted source selection before X constructs Home. The actual
+// visible-index correction is performed once after the segmented controller has
+// finished appearing (see viewDidAppear: below).
 - (void)viewDidLoad {
     if (HideForYouEnabled()) {
         ClearHiddenHomeSelection();
@@ -269,9 +285,25 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
     ActiveHomeTimelineContainer = self;
-    if (HideForYouEnabled()) {
+
+    if (HideForYouEnabled() &&
+        ![objc_getAssociatedObject(self, &HomeInitialSelectionFixedKey) boolValue]) {
+        // Do this once, on the next main-loop turn, after Twitter's own startup
+        // restoration has completed. Repeating it on every appearance would
+        // incorrectly kick the user out of a pinned/custom timeline they chose.
+        objc_setAssociatedObject(
+            self, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         ClearHiddenHomeSelection();
+
+        __weak id weakSelf = self;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            id strongSelf = weakSelf;
+            if (strongSelf && HideForYouEnabled()) {
+                ReloadHomeTimelineTabs(strongSelf);
+            }
+        });
     }
+
     SyncHomeAddTabButton(self, [BHTSettings boolForKey:@"hide_custom_timelines"]);
 }
 
