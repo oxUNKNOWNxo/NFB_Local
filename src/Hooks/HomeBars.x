@@ -14,6 +14,8 @@ static __weak id ActiveHomeTimelineContainer;
 static char HomeInitialSelectionFixedKey;
 static NSString* const HomeTimelineTabSelectionKey =
     @"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier";
+static NSString* const HomeRememberedVisibleIndexKey =
+    @"NFBLocal.hideForYou.lastVisibleIndex";
 
 static BOOL HideForYouEnabled(void) {
     return [BHTSettings boolForKey:@"hide_for_you_tab"];
@@ -37,24 +39,68 @@ static void ClearHiddenHomeSelection(void) {
     [[NSUserDefaults standardUserDefaults] removeObjectForKey:HomeTimelineTabSelectionKey];
 }
 
-static void ReloadHomeTimelineTabs(id container) {
+static NSInteger RememberedHomeVisibleIndex(void) {
+    NSNumber* stored = [[NSUserDefaults standardUserDefaults]
+        objectForKey:HomeRememberedVisibleIndexKey];
+    if (![stored isKindOfClass:[NSNumber class]]) {
+        return 0;
+    }
+
+    NSInteger index = stored.integerValue;
+    return index >= 0 ? index : 0;
+}
+
+static void RememberHomeVisibleIndex(NSInteger index) {
+    if (index < 0) {
+        index = 0;
+    }
+
+    [[NSUserDefaults standardUserDefaults]
+        setInteger:index
+        forKey:HomeRememberedVisibleIndexKey];
+}
+
+static id HomeSegmentedController(id container) {
     if (!container || ![container respondsToSelector:@selector(segmentedViewController)]) {
+        return nil;
+    }
+
+    return ((id (*)(id, SEL))objc_msgSend)(container, @selector(segmentedViewController));
+}
+
+static NSInteger ValidHomeVisibleIndex(id container,
+                                       id segmentedController,
+                                       NSInteger requestedIndex) {
+    NSInteger index = requestedIndex >= 0 ? requestedIndex : 0;
+
+    if (container && segmentedController &&
+        [container respondsToSelector:@selector(numberOfTabsIn:)]) {
+        NSInteger count = ((NSInteger (*)(id, SEL, id))objc_msgSend)(
+            container, @selector(numberOfTabsIn:), segmentedController);
+        if (count > 0 && index >= count) {
+            index = 0;
+        }
+    }
+
+    return index;
+}
+
+static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex) {
+    id segmentedController = HomeSegmentedController(container);
+    if (!segmentedController) {
         return;
     }
 
-    id segmentedController =
-        ((id (*)(id, SEL))objc_msgSend)(container, @selector(segmentedViewController));
+    NSInteger visibleIndex =
+        ValidHomeVisibleIndex(container, segmentedController, requestedIndex);
 
     // X 12.31.1 exposes reloadDataWithSelectingIndex: on the legacy segmented
-    // controller. The controller keeps its own visible index independently of
-    // THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier,
-    // which is why merely clearing that preference still reopened visible index
-    // 1. When For You is hidden, explicitly reload at visible index 0; the data
-    // source remap below turns that into source index 1 (Following).
+    // controller. Keep selection in VISIBLE-index space; the data-source remap
+    // below converts visible index N to source index N+1 while For You is hidden.
     if (HideForYouEnabled() &&
         [segmentedController respondsToSelector:@selector(reloadDataWithSelectingIndex:)]) {
         ((void (*)(id, SEL, NSInteger))objc_msgSend)(
-            segmentedController, @selector(reloadDataWithSelectingIndex:), 0);
+            segmentedController, @selector(reloadDataWithSelectingIndex:), visibleIndex);
     } else if ([segmentedController respondsToSelector:@selector(reloadData)]) {
         ((void (*)(id, SEL))objc_msgSend)(segmentedController, @selector(reloadData));
     }
@@ -65,16 +111,67 @@ static void ReloadHomeTimelineTabs(id container) {
     }
 }
 
+// Called before T1AppDelegate's original applicationWillResignActive:. This is
+// intentionally BEFORE Twitter's own lifecycle handling so any internal restore
+// or index mutation that happens while resigning cannot overwrite the user's
+// actually visible tab. `currentIndex` belongs to LegacySegmentedViewController
+// and therefore is already in visible-index space.
+void saveHomeTimelineSelectionBeforeResignActive(void) {
+    if (!HideForYouEnabled()) {
+        return;
+    }
+
+    id container = ActiveHomeTimelineContainer;
+    id segmentedController = HomeSegmentedController(container);
+    if (!segmentedController ||
+        ![segmentedController respondsToSelector:@selector(currentIndex)]) {
+        return;
+    }
+
+    NSInteger currentIndex = ((NSInteger (*)(id, SEL))objc_msgSend)(
+        segmentedController, @selector(currentIndex));
+    currentIndex =
+        ValidHomeVisibleIndex(container, segmentedController, currentIndex);
+    RememberHomeVisibleIndex(currentIndex);
+}
+
+// Called after T1AppDelegate's original applicationDidBecomeActive:. Twitter may
+// restore visible index 1 while becoming active, so apply our last known-good
+// visible index on the next main-loop turn, after its lifecycle work has settled.
+void restoreHomeTimelineSelectionAfterBecomeActive(void) {
+    if (!HideForYouEnabled()) {
+        return;
+    }
+
+    id container = ActiveHomeTimelineContainer;
+    if (!container) {
+        return;
+    }
+
+    ClearHiddenHomeSelection();
+    __weak id weakContainer = container;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        id strongContainer = weakContainer;
+        if (strongContainer && HideForYouEnabled()) {
+            ReloadHomeTimelineTabsAtIndex(
+                strongContainer, RememberedHomeVisibleIndex());
+        }
+    });
+}
+
 void applyHideForYouSetting(void) {
     id container = ActiveHomeTimelineContainer;
     if (HideForYouEnabled()) {
         ClearHiddenHomeSelection();
+        // Enabling the setting always begins from Following. Subsequent explicit
+        // user choices are preserved across background/foreground via currentIndex.
+        RememberHomeVisibleIndex(0);
         if (container) {
             objc_setAssociatedObject(
                 container, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
     }
-    ReloadHomeTimelineTabs(container);
+    ReloadHomeTimelineTabsAtIndex(container, 0);
 }
 
 
@@ -288,9 +385,9 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 
     if (HideForYouEnabled() &&
         ![objc_getAssociatedObject(self, &HomeInitialSelectionFixedKey) boolValue]) {
-        // Do this once, on the next main-loop turn, after Twitter's own startup
-        // restoration has completed. Repeating it on every appearance would
-        // incorrectly kick the user out of a pinned/custom timeline they chose.
+        // Initial construction still needs a one-shot correction because on cold
+        // launch applicationDidBecomeActive: can run before Home exists. Use the
+        // last visible index captured before the previous background transition.
         objc_setAssociatedObject(
             self, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         ClearHiddenHomeSelection();
@@ -299,7 +396,8 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
         dispatch_async(dispatch_get_main_queue(), ^{
             id strongSelf = weakSelf;
             if (strongSelf && HideForYouEnabled()) {
-                ReloadHomeTimelineTabs(strongSelf);
+                ReloadHomeTimelineTabsAtIndex(
+                    strongSelf, RememberedHomeVisibleIndex());
             }
         });
     }
