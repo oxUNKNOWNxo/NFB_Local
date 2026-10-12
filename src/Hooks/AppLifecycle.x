@@ -137,8 +137,6 @@ static void removePadlockOverlay(void) {
     }
 }
 
-// Deliberately in-memory only: the padlock must always re-prompt after a
-// relaunch, so persisting this would only risk skipping it.
 static BOOL padlockAuthenticated = NO;
 
 static BOOL isAuthenticated(void) {
@@ -217,6 +215,10 @@ static void presentAuthIfNeeded(void) {
 - (void)applicationDidBecomeActive:(__unsafe_unretained id)arg1 {
     %orig;
 
+    // Twitter may rewrite the Home segmented-controller selection while becoming
+    // active. Restore NFB_Local's visible-index selection after that work finishes.
+    restoreHomeTimelineSelectionAfterBecomeActive();
+
     applySelectedThemeColor();
     prewarmWebCookiesIfNeeded();
 
@@ -235,11 +237,13 @@ static void presentAuthIfNeeded(void) {
 }
 
 - (void)applicationWillResignActive:(__unsafe_unretained id)arg1 {
+    // Capture the actual visible Home tab before Twitter's own resign-active
+    // handling gets a chance to persist/remap its internal index.
+    saveHomeTimelineSelectionBeforeResignActive();
+
     %orig;
 
     if ([BHTSettings boolForKey:@"padlock"]) {
-        // Cover the UI (and the app-switcher snapshot) and mark unauthenticated so
-        // the next activation prompts again; the overlay persists into background.
         showPadlockOverlay();
         setAuthenticated(NO);
     }
@@ -253,13 +257,7 @@ static void presentAuthIfNeeded(void) {
 
 // MARK: - Restore Launch Animation
 
-// The launch animation reveals the app through a growing X-shaped mask
-// (revealMaskLayer / holePathInView); detach it so the logo zoom is kept but
-// the splash simply fades out.
-
 static void stripLaunchRevealMask(UIView* view) {
-    // The X-shaped hole lives on the container subview's layer.mask; the top
-    // view itself is unmasked, but clear it too for safety.
     view.layer.mask = nil;
     for (UIView* sub in view.subviews) {
         sub.layer.mask = nil;
@@ -270,7 +268,6 @@ static void stripLaunchRevealMask(UIView* view) {
 
 - (void)layoutSubviews {
     %orig;
-    // layoutSubviews re-installs the mask each pass, so re-strip after %orig.
     stripLaunchRevealMask((UIView*)self);
 }
 
