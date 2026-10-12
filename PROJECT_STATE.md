@@ -34,21 +34,23 @@
 
 - 本家 NeoFreeBird: **7.1.1**
 - ベースTwitterアプリ: **12.31.1**
-- NFB_Local: **7.1.4**
-- 最新ビルド: `local_7.1.4_12.31.1.tipa`
-- GitHub Actions: `Package` run #5
-- Run ID: `38297480481`
-- Artifact ID: `11768374907`
-- Artifact size: `257038679` bytes
+- NFB_Local: **7.1.5**
+- 最新ビルド: `local_7.1.5_12.31.1.tipa`
+- GitHub Actions: `Package` run #6
+- Run ID: `38317396560`
+- Artifact ID: `11776887465`
+- Artifact size: `257040932` bytes
 - Artifact SHA-256:
-  `1570e63af09b809b429de92a94b25fb96948874881dda5075afe8543458164a4`
+  `82a79ccadcc5e09682a76d1552ba6b8ed92a832668364ce11a777f60294e99fc`
 
 ### build検証状態
 
-run #5で以下は成功済み:
+run #6で以下は成功済み:
 
 - Source compile
 - `HomeBars.x` compile
+- `AppLifecycle.x` compile
+- 設定画面追加部分 compile
 - TrollStore Twitter base取得
 - dylib差し替え
 - CydiaSubstrate dependency補正
@@ -57,15 +59,9 @@ run #5で以下は成功済み:
 - ZIP integrity check
 - Artifact upload
 
-確認されたdependency:
+`Package` は検証時のみpush triggerを一時追加し、run #6開始後に **workflow_dispatchのみ**へ戻してある。
 
-```text
-Base substrate dependency: @rpath/CydiaSubstrate.framework/CydiaSubstrate
-Built substrate dependency: /Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate
-Patched substrate dependency: @rpath/CydiaSubstrate.framework/CydiaSubstrate
-```
-
-`local_7.1.4_12.31.1.tipa` の**再起動時Home選択修正は実機確認待ち**。
+`local_7.1.5_12.31.1.tipa` のHome選択挙動は**実機確認待ち**。
 
 ---
 
@@ -100,6 +96,19 @@ Patched substrate dependency: @rpath/CydiaSubstrate.framework/CydiaSubstrate
 - macOSアプリアイコン変更エラー文
 - その他不足していた設定文字列
 
+### 3.1 `restore_home_tab_selection` の表示文字列
+
+7.1.5で追加したローカル設定 `restore_home_tab_selection` は、本家共通設定レジストリとの競合を避けるため、`TimelinesSettingsViewController.m` からページへ直接追加している。
+
+同ファイル内で:
+
+- 日本語: `選択したホームタブを復元`
+- 英語: `Restore selected Home tab`
+
+を表示する。
+
+この1項目は現時点では `Localizable.strings` ではなくページ側のローカル文字列なので、`check_localization.py` の293件には含まれない。
+
 ---
 
 ## 4. 「おすすめ」タブ非表示
@@ -119,6 +128,8 @@ Patched substrate dependency: @rpath/CydiaSubstrate.framework/CydiaSubstrate
 - `src/Core/BHTSettings.m`
 - `src/Settings/Pages/TimelinesSettingsViewController.m`
 - `src/Hooks/HomeBars.x`
+- `src/Hooks/AppLifecycle.x`
+- `src/Hooks/HookHelpers.h`
 
 日本語表示:
 
@@ -149,7 +160,7 @@ XNotForMeなど旧版向けtweakのselectorだけを根拠にしない。
 
 **visible indexとsource indexを混同しないこと。**
 
-12.31.1で利用中の主なselector:
+12.31.1で確認済みの主なselector:
 
 - `numberOfTabsIn:`
 - `segmentedViewController:descriptorAtIndex:`
@@ -161,6 +172,11 @@ XNotForMeなど旧版向けtweakのselectorだけを根拠にしない。
 - `segmentedViewController:tabGroupAtIndex:`
 - `segmentedViewController:didTapTabAtIndex:`
 - `segmentedViewController:didLongPressAtIndex:`
+- `reloadDataWithSelectingIndex:`
+- `currentIndex`
+- `selectedViewController`
+- `segmentedViewController:willSelectViewController:atIndex:indexChanged:`
+- `segmentedViewController:didSelectViewController:atIndex:previousIndex:trigger:`
 
 互換目的で旧12.3系の `numberOfTabsV1In:` / `numberOfTabsV2In:` / `unifiedSegmentedController:...` も残している。
 
@@ -171,7 +187,7 @@ XNotForMeなど旧版向けtweakのselectorだけを根拠にしない。
 - おすすめ非表示は機能。
 - 再起動するとFollowingではなく**表示上2番目のタブ（最初の固定/カスタムtimeline）**が選択された。
 
-7.1.2ではsource index 1をFollowingとして強制する処理があり、For You除去後のvisible index 1として解釈される経路があった。
+source index 1とvisible index 1を混同する経路が疑われた。
 
 ### 4.3 7.1.3 — 保存キー削除では直らなかった
 
@@ -186,70 +202,90 @@ XNotForMeなど旧版向けtweakのselectorだけを根拠にしない。
 
 **実機結果: 失敗。**
 
-ユーザー確認では7.1.3でも再起動後に表示上2番目のタブが選択された。
+7.1.3でも再起動後に表示上2番目のタブが選択された。
 
 結論:
 
-- 問題の主因はNSUserDefaultsの保存キーではない。
-- `LegacySegmentedViewController` 側が独立してvisible index 1を保持/復元している可能性が高い。
+- NSUserDefaultsの保存キー削除だけでは不十分。
+- `LegacySegmentedViewController` 側のvisible indexも扱う必要がある。
 
-### 4.4 7.1.4 — LegacySegmented側のvisible indexを明示補正
+### 4.4 7.1.4 — `reloadDataWithSelectingIndex:0`
 
-12.31.1本体を追加解析し、選択関連として以下を確認した:
-
-- `reloadDataWithSelectingIndex:`
-- `selectTabAtIndex:`
-- `currentIndex`
-- `selectedViewController`
-- `segmentedViewController:willSelectViewController:atIndex:indexChanged:`
-- `segmentedViewController:didSelectViewController:atIndex:previousIndex:trigger:`
-- `selectedTabIndex`
-- `setSelectedIndex:`
-- `setSelectedIndex:animated:`
-
-このうち7.1.4では、意味が明確でruntime確認も可能な **`reloadDataWithSelectingIndex:`** を採用した。
-
-`ReloadHomeTimelineTabs()` は `hide_for_you_tab` ON時:
+7.1.4ではHome初回表示時に一度だけ:
 
 ```text
 reloadDataWithSelectingIndex:0
 ```
 
-を `respondsToSelector:` で存在確認してから呼ぶ。
+を実行した。
 
-visible index 0は既存DataSource remapによりsource index 1 = Followingとなる。
+実機結果:
 
-さらに起動時は:
+- 通常の別画面へ移動してHomeへ戻っただけでは、固定リストから勝手にFollowingへ戻る副作用は確認されなかった。
+- ただし、別アプリを起動して戻った場合またはアプリ再起動など、条件未確定のタイミングで**依然として表示上2番目のタブが先頭表示になることがあった**。
 
-- `viewDidAppear:` 完了後
-- main queueの次のrun-loop turn
-- Home containerインスタンスごとに**一度だけ**
+したがって7.1.4の「containerごとに1回だけ0へ補正」は不十分。
 
-この補正を実行する。
+### 4.5 7.1.5 — コールド起動と復帰を分離
 
-一度限りにしている理由:
+ユーザー指示:
 
-- Homeへ戻るたびに0番を強制すると、ユーザーが手動選択した固定/カスタムtimelineから毎回Followingへ戻されてしまうため。
+1. **アプリの初期起動時は必ずFollowingを選択する。**
+2. 選択した固定リストを復元する機能は独立した設定項目にする。
 
-設定をONへ切り替えた際の `applyHideForYouSetting()` も同じreload/select処理を使い、即時にFollowingを先頭表示する。
+追加設定キー:
 
-なお、X内部がalgorithmic variant 0を要求した場合の:
+```text
+restore_home_tab_selection
+```
 
-- `selectTimelineVariant:shouldRefresh:`
-- `selectFilteredTimelineVariant:shouldRefresh:`
+仕様:
 
-の `0 -> 1` リダイレクトは引き続き残す。
+- 初期値: **OFF**
+- `hide_for_you_tab` の子設定として表示。
+- `hide_for_you_tab` がOFFなら設定行自体を隠す。
+- コールド起動時は設定ON/OFFにかかわらず必ず visible index 0 = Following。
+- 選択indexは**プロセス内static変数だけ**に保持し、NSUserDefaultsへ永続化しない。
+- よってアプリを完全終了すると記録は消え、次回は必ずFollowingから開始する。
 
-### 4.5 設定画面側
+復元設定OFF:
+
+- バックグラウンドから復帰した場合もFollowingへ戻す。
+
+復元設定ON:
+
+- `applicationWillResignActive:` で、Twitter本体の `%orig` より**前**に `LegacySegmentedViewController.currentIndex` を取得。
+- 現在のvisible indexを `HomeSessionVisibleIndex` に保存。
+- `applicationDidBecomeActive:` のTwitter本体 `%orig` 完了後に、main queue次turnで `reloadDataWithSelectingIndex:<saved visible index>` を実行。
+- 同一プロセス内だけ、手動選択した固定/カスタムtimelineを復元する。
+
+初回Home構築:
+
+- `HomeColdLaunchSelectionApplied == NO` なら必ずtarget index 0。
+- 初回補正後に `HomeColdLaunchSelectionApplied = YES`。
+- 後からHome containerが再生成された場合のみ、復元設定ONならsession indexを使える。
+
+設定ON/OFFを変更した際:
+
+- ON: 現在のvisible indexをsession記録に取り込む。
+- OFF: session記録を0へ戻し、その場でFollowingへ戻す。
+
+実機確認はまだ。
+
+### 4.6 設定画面実装
 
 `TimelinesSettingsViewController.m` は:
 
 - `hide_custom_timelines` -> `applyHideCustomTimelinesSetting()`
 - `hide_for_you_tab` -> `applyHideForYouSetting()`
+- `restore_home_tab_selection` -> `applyRestoreHomeTabSelectionSetting()`
 
-のみ。
+`restore_home_tab_selection` は本家 `BHTSettingsPages()` を直接変更せず、`-buildSettingsList` overrideで `hide_for_you_tab` の直後へ挿入する。
 
-古い `setObject:@"latest"` は残っていない。
+理由:
+
+- ローカル専用機能を本家共通registryから分離する。
+- 本家更新時のmerge競合を減らす。
 
 ---
 
@@ -313,10 +349,8 @@ local_<NFB_Local Version>_<Twitter App Version>.tipa
 現在:
 
 ```text
-local_7.1.4_12.31.1.tipa
+local_7.1.5_12.31.1.tipa
 ```
-
-一時的な `.run_package` / Home診断workflow / 診断triggerは7.1.4作業終了時点で削除済み。
 
 ---
 
@@ -330,7 +364,7 @@ local_7.1.4_12.31.1.tipa
 4. ローカル独自変更を維持。
 5. 英語Localizableと日本語Localizableを比較し日本語化。
 6. `check_localization.py ja` / `ja --values` を確認。
-7. `hide_for_you_tab` を維持。
+7. `hide_for_you_tab` と `restore_home_tab_selection` を維持。
 8. 新Twitter/X版でHome Timeline内部APIが変わっていれば実バイナリを解析。
 9. TrollStore `@rpath`補正等を維持。
 10. Compile / Assemble / Artifact生成まで確認。
@@ -339,6 +373,8 @@ local_7.1.4_12.31.1.tipa
 特に競合確認するファイル:
 
 - `src/Hooks/HomeBars.x`
+- `src/Hooks/AppLifecycle.x`
+- `src/Hooks/HookHelpers.h`
 - `src/Core/BHTSettings.m`
 - `src/Settings/Pages/TimelinesSettingsViewController.m`
 - `src/Hooks/FeatureSwitches.x`
@@ -352,7 +388,7 @@ Home Timelineは古いselectorを盲目的に再利用せず、必要ならbase 
 - HomeTimelineContainer
 - `numberOfTabs*`
 - segmented controller
-- selected/select/index
+- selected/select/index/currentIndex
 - TimelineVariant
 - Following / ForYou / latest
 
@@ -369,7 +405,7 @@ ChatGPT側に条件監視タスク **「NeoFreeBird追従更新」** を設定�
 - 本家更新がなければ通知しない。
 - 更新があればNFB_Localへ取り込み。
 - 日本語化を更新。
-- `hide_for_you_tab` を維持・必要なら新Twitter版へ適応。
+- `hide_for_you_tab` / `restore_home_tab_selection` を維持し、必要なら新Twitter版へ適応。
 - TrollStore Package/buildまで進める。
 - 安全に解決できない競合は動作中の版を壊さず通知する。
 
@@ -407,31 +443,40 @@ For Youを削除するとFollowingは:
 
 ### 9.5 7.1.3の保存キー削除方式へ戻さない
 
-`lastSelectedTimelineTabIdentifier` の削除だけでは再起動時の2番目選択は直らなかった。
+`lastSelectedTimelineTabIdentifier` の削除だけでは2番目選択は直らなかった。
 12.31.1ではLegacySegmented側のvisible indexも明示的に扱う必要がある。
+
+### 9.6 7.1.4のcontainer一回補正だけへ戻さない
+
+`reloadDataWithSelectingIndex:0` をHome container初回表示時に一度呼ぶだけでは、バックグラウンド復帰/再生成等で2番目へずれる現象が残った。
+
+7.1.5以降はApp lifecycleを跨いでvisible indexを扱う。
 
 ---
 
 ## 10. 現在の既知課題 / 要実機確認
 
-1. **7.1.4 再起動時選択修正**
-   - build/package成功。
-   - 実機確認待ち。
-   - 期待動作: おすすめ非表示ONでアプリを完全終了→再起動した際、Following（表示上先頭）で開く。
-   - 固定/カスタムtimelineを手動選択した後、通常の画面遷移で勝手にFollowingへ戻らないことも確認する。
+1. **7.1.5 コールド起動**
+   - `hide_for_you_tab` ONで完全終了→起動した際、必ずFollowing（表示上先頭）で開くこと。
 
-2. **初回/設定変更直後のUI反映**
-   - `applyHideForYouSetting()` がreloadを行う。
-   - defaultはOFFなので新規インストール直後にFor Youが見えること自体は仕様。
+2. **復元設定OFF**
+   - 固定リストを選択→別アプリへ移動→戻るとFollowingへ戻ること。
 
-3. **本家更新時の内部API変更**
+3. **復元設定ON**
+   - 固定リストを選択→別アプリへ移動→戻ると同じ固定リストへ戻ること。
+   - その後アプリを完全終了→再起動すると、固定リストではなくFollowingから始まること。
+
+4. **通常の画面遷移**
+   - Home以外のTwitter内画面へ移動して戻っただけで、不必要にFollowingへ戻されないこと。
+
+5. **本家更新時の内部API変更**
    - 新Twitter/X版でselectorが変わる可能性あり。
 
 ---
 
 ## 11. 次チャット開始時の推奨指示
 
-> `oxUNKNOWNxo/NFB_Local` の `PROJECT_STATE.md` を最初に読み、その内容を基準に現在のmainを確認してから作業を続けてください。特にTrollStoreの@rpath補正、Twitterブランド基準、hide_for_you_tabのvisible/source index設計と7.1.4のreloadDataWithSelectingIndex:0による初期選択補正を維持し、過去の単純dylib差し替え方式や7.1.3の保存キー削除だけの方式へ戻さないでください。
+> `oxUNKNOWNxo/NFB_Local` の `PROJECT_STATE.md` を最初に読み、その内容を基準に現在のmainを確認してから作業を続けてください。特にTwitterブランド基準、TrollStoreの@rpath補正、hide_for_you_tabのvisible/source index設計、7.1.5の「コールド起動は必ずFollowing・固定リスト復元は任意かつ同一セッションのみ」という仕様を維持してください。過去の単純dylib差し替え、保存キー削除だけの7.1.3、container初回一度だけ補正する7.1.4へ戻さないでください。
 
 ---
 
@@ -445,7 +490,7 @@ For Youを削除するとFollowingは:
 - Twitter/Xアプリバージョン
 - NFB_Localバージョン
 - 最新build / Artifact ID / SHA-256
-- `hide_for_you_tab` の互換実装
+- `hide_for_you_tab` / `restore_home_tab_selection` の互換実装
 - Package方式の変更
 - 新しい既知問題
 - 解決済み問題
