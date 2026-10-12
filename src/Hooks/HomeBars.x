@@ -67,12 +67,11 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 // handing it an empty array hides the tabs without touching persisted state.
 %hook _TtC32TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
 
-// X 12.3 exposes the standard Home timelines through the unified segmented
-// controller. Index 0 is For You and index 1 is Following. When requested,
-// expose every tab except index 0 by shifting visible indices by one. This keeps
-// Following and any pinned/custom timelines intact instead of hiding the whole
-// selector bar.
-- (NSInteger)numberOfTabsV1In:(id)controller {
+// X 12.3+ uses TFNScrollingSegmentedViewController's data-source selectors here.
+// Index 0 is For You and index 1 is Following. When enabled, expose one fewer
+// entry and shift every visible index by one. This removes only For You while
+// preserving Following and any pinned/custom timeline entries after it.
+- (NSInteger)numberOfEntriesForSegmentedViewController:(id)controller {
     NSInteger count = %orig;
     if (![BHTSettings boolForKey:@"hide_for_you_tab"]) {
         return count;
@@ -80,40 +79,25 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
     return count > 0 ? count - 1 : 0;
 }
 
-- (NSInteger)numberOfTabsV2In:(id)controller {
-    NSInteger count = %orig;
-    if (![BHTSettings boolForKey:@"hide_for_you_tab"]) {
-        return count;
-    }
-    return count > 0 ? count - 1 : 0;
-}
-
-- (UIViewController*)unifiedSegmentedController:(id)controller
-                       v1ViewControllerAtIndex:(NSInteger)index {
+- (UIViewController*)segmentedViewController:(id)controller
+                       viewControllerAtIndex:(NSInteger)index {
     NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
     return %orig(controller, sourceIndex);
 }
 
-- (NSString*)unifiedSegmentedController:(id)controller
-                         v1TitleAtIndex:(NSInteger)index {
+- (NSString*)segmentedViewController:(id)controller titleAtIndex:(NSInteger)index {
     NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
     return %orig(controller, sourceIndex);
 }
 
-- (NSString*)unifiedSegmentedController:(id)controller
-            v1AccessibilityLabelAtIndex:(NSInteger)index {
+- (NSAttributedString*)segmentedViewController:(id)controller
+                        attributedTitleAtIndex:(NSInteger)index {
     NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
     return %orig(controller, sourceIndex);
 }
 
-- (UIViewController*)unifiedSegmentedController:(id)controller
-                       v2ViewControllerAtIndex:(NSInteger)index {
-    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
-    return %orig(controller, sourceIndex);
-}
-
-- (id)unifiedSegmentedController:(id)controller
-             v2DescriptorAtIndex:(NSInteger)index {
+- (NSString*)segmentedViewController:(id)controller
+           accessibilityLabelAtIndex:(NSInteger)index {
     NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
     return %orig(controller, sourceIndex);
 }
