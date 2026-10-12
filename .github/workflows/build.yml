@@ -19,7 +19,7 @@ on:
         type: string
       deploy_format:
         description: "Deployment format"
-        default: sideloaded
+        default: trollstore
         required: true
         type: choice
         options:
