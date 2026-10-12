@@ -1,9 +1,7 @@
 name: Verify NFB Local build
 
 on:
-  push:
-    paths:
-      - '.nfb_build'
+  workflow_dispatch:
 
 jobs:
   build:
