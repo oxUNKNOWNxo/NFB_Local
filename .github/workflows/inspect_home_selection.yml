@@ -23,17 +23,16 @@ jobs:
           test -n "$APP"
           BIN=""
           while IFS= read -r candidate; do
-            if file "$candidate" 2>/dev/null | grep -q 'Mach-O' && \
-               strings "$candidate" 2>/dev/null | grep -q 'LegacySegmentedViewController'; then
-              echo "Found LegacySegmentedViewController in: $candidate"
-              BIN="$candidate"
-              break
+            if file "$candidate" 2>/dev/null | grep -q 'Mach-O'; then
+              if grep -a -q 'LegacySegmentedViewController' "$candidate" 2>/dev/null; then
+                echo "Found LegacySegmentedViewController in: $candidate"
+                BIN="$candidate"
+                break
+              fi
             fi
           done < <(find "$APP/Frameworks" -type f 2>/dev/null | sort)
           if [ -z "$BIN" ]; then
             echo 'No Framework Mach-O containing LegacySegmentedViewController was found.' >&2
-            echo 'Framework binaries:' >&2
-            find "$APP/Frameworks" -maxdepth 2 -type f -print >&2 || true
             exit 1
           fi
           echo "binary=$BIN" >> "$GITHUB_ENV"
@@ -48,4 +47,4 @@ jobs:
           echo '=== Objective-C selection method names ==='
           otool -v -s __TEXT __objc_methname "$binary" 2>/dev/null | grep -Ei "$PATTERN" | head -n 3000 || true
           echo '=== LegacySegmentedViewController class metadata ==='
-          otool -ov "$binary" 2>/dev/null | grep -B 20 -A 260 -E '_TtC10TFNUISwift29LegacySegmentedViewController|LegacySegmentedViewController$' | head -n 6000 || true
+          otool -ov "$binary" 2>/dev/null | grep -B 20 -A 300 -E '_TtC10TFNUISwift29LegacySegmentedViewController|LegacySegmentedViewController$' | head -n 7000 || true
