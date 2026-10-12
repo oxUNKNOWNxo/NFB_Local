@@ -1,0 +1,194 @@
+name: Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_version:
+        description: "SDK version"
+        default: "16.5"
+        required: true
+        type: string
+      target_version:
+        description: "Target version"
+        default: "15.0"
+        required: true
+        type: string
+      base_tag:
+        description: "Base release tag (blank = latest)"
+        default: ""
+        required: false
+        type: string
+  push:
+    paths:
+      - '.run_package'
+
+concurrency:
+  group: package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package
+    runs-on: macos-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          path: main
+          submodules: recursive
+
+      - name: Dependencies
+        run: brew install make dpkg ldid jq
+
+      - name: Configure make
+        run: echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
+
+      - name: Toolchain
+        uses: actions/checkout@v6
+        with:
+          repository: theos/theos
+          ref: master
+          path: theos
+          submodules: recursive
+
+      - name: SDK cache
+        id: sdk
+        uses: actions/cache@v6
+        with:
+          path: theos/sdks/
+          key: ios-${{ inputs.sdk_version || '16.5' }}-sdk
+
+      - name: SDK
+        if: steps.sdk.outputs.cache-hit != 'true'
+        run: |
+          SDK_VERSION="${{ inputs.sdk_version || '16.5' }}"
+          git clone -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/ sdks
+          cd sdks
+          git sparse-checkout set --no-cone "iPhoneOS${SDK_VERSION}.sdk"
+          git checkout
+          mv ./*.sdk "$THEOS/sdks"
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Resolve base
+        id: base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.base_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REQUESTED_TAG:-}" ]; then
+            API_URL="https://api.github.com/repos/NeoFreeBird/app/releases/tags/${REQUESTED_TAG}"
+          else
+            API_URL="https://api.github.com/repos/NeoFreeBird/app/releases/latest"
+          fi
+
+          RELEASE_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "$API_URL")
+
+          ASSET_URL=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .browser_download_url' | head -n1)
+
+          if [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then
+            echo "Compatible base asset not found." >&2
+            exit 1
+          fi
+
+          echo "url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch base
+        env:
+          ASSET_URL: ${{ steps.base.outputs.url }}
+        run: |
+          mkdir -p base
+          curl -fL --retry 3 "$ASSET_URL" -o base/base.tipa
+
+      - name: Build cache key
+        id: ffmpeg-key
+        run: |
+          echo "key=ffmpeg-stack-$(git -C main rev-parse --short HEAD:deps/ffmpeg-kit-next/upstream)-${{ hashFiles('main/deps/ffmpeg-kit-next/build-ffmpeg.sh') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ffmpeg-build
+            main/deps/ffmpeg-kit-next/build
+          key: ${{ steps.ffmpeg-key.outputs.key }}
+
+      - name: Compile
+        env:
+          THEOS: ${{ github.workspace }}/theos
+          BUILD_DIR: ${{ github.workspace }}/ffmpeg-build
+        run: |
+          set -euo pipefail
+          cd main
+          SDK_VERSION="${{ inputs.sdk_version || '16.5' }}"
+          TARGET_VERSION="${{ inputs.target_version || '15.0' }}"
+          sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${SDK_VERSION}:${TARGET_VERSION}/" Makefile
+          chmod +x deps/ffmpeg-kit-next/build-ffmpeg.sh
+          if [ ! -f deps/ffmpeg-kit-next/build/lib/libffmpegkit.a ]; then
+            git submodule update --init deps/ffmpeg-kit-next/upstream
+            deps/ffmpeg-kit-next/build-ffmpeg.sh
+          fi
+          make clean || true
+          make
+          test -f .theos/obj/debug/BHTwitter.dylib
+          file .theos/obj/debug/BHTwitter.dylib
+          lipo -info .theos/obj/debug/BHTwitter.dylib
+
+      - name: Assemble
+        id: package
+        run: |
+          set -euo pipefail
+          rm -rf patched
+          mkdir patched
+          unzip -q base/base.tipa -d patched
+
+          APP=$(find patched/Payload -maxdepth 2 -type d -name '*.app' | head -n1)
+          test -n "$APP"
+
+          OLD_DYLIB=$(find "$APP" -type f -name 'BHTwitter.dylib' | head -n1)
+          OLD_BUNDLE=$(find "$APP" -type d -name 'BHTwitter.bundle' | head -n1)
+          test -n "$OLD_DYLIB"
+          test -n "$OLD_BUNDLE"
+
+          cp main/.theos/obj/debug/BHTwitter.dylib "$OLD_DYLIB"
+          ldid -S "$OLD_DYLIB"
+
+          rm -rf "$OLD_BUNDLE"
+          cp -R "main/layout/Library/Application Support/BHT/BHTwitter.bundle" "$OLD_BUNDLE"
+
+          # The upstream TrollStore package is already CoreTrust-patched. Once a
+          # binary is replaced, that fast-path must not be reused: otherwise the
+          # installer can skip re-signing and the replacement dylib will fail at
+          # launch. Removing both current and legacy markers forces TrollStore to
+          # sign every binary again during installation.
+          /usr/libexec/PlistBuddy -c 'Delete :TSPreAppliedExploitType' "$APP/Info.plist" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c 'Delete :TSBundlePreSigned' "$APP/Info.plist" 2>/dev/null || true
+
+          APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          LOCAL_VERSION=$(awk '/^Version:/ {print $2}' main/control)
+          OUTPUT="local_${LOCAL_VERSION}_${APP_VERSION}.tipa"
+
+          (
+            cd patched
+            zip -qry "../$OUTPUT" Payload
+          )
+
+          unzip -tq "$OUTPUT"
+          echo "filename=$OUTPUT" >> "$GITHUB_OUTPUT"
+          ls -lh "$OUTPUT"
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: output
+          path: ${{ steps.package.outputs.filename }}
+          archive: false
+          if-no-files-found: error
