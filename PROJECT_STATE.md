@@ -7,133 +7,143 @@
 
 ---
 
-## 1. リポジトリ / 方針
+## 1. リポジトリ / 基本方針
 
 - ローカル改修先: `oxUNKNOWNxo/NFB_Local`
-- 現在の可視性: **Private**
+- 可視性: **Private**
 - デフォルトブランチ: `main`
 - 本家: `NeoFreeBird/app`
 - 本家基準ブランチ: `v7`
-- 本家とはGitHub上のFork関係を持たない独立リポジトリとして作成した。
-- `README.md` は意図的に空白化している。
-- GitHub上で目立つ名称を減らすため、Actionsは中立名の `Package` を主用途としている。
-- LICENSE / 著作権表示はGPLv3準拠のため維持すること。
+- GitHub上のFork関係を持たない独立リポジトリ。
+- `README.md` は検索避けのため意図的に空白。
+- Actionsは中立名の `Package` を主用途とする。
+- LICENSE / 著作権表示はGPLv3準拠のため維持する。
 
-### ユーザーの利用環境 / 必須方針
+### 利用環境 / 必須方針
 
 - 利用方法: **TrollStore**
-- パッケージ基準: **Twitterブランド版**
-- Xブランド版ではなく、本家リリース内の `NeoFreeBird-trollstore-Twitter_*.tipa` を基準にする。
-- 今後もTwitter版を優先し、X版へ切り替えないこと。
+- ブランド: **Twitter版を基準**
+- Xブランド版ではなく、本家release内の `NeoFreeBird-trollstore-Twitter_*.tipa` を使用する。
+- 今後も明示指示がない限りX版へ切り替えない。
 
 ---
 
 ## 2. 現在の基準バージョン
 
-このPROJECT_STATE作成時点:
+2026-10-13時点:
 
 - 本家 NeoFreeBird: **7.1.1**
 - ベースTwitterアプリ: **12.31.1**
-- NFB_Local control version: **7.1.2**
-- 最新の確認済みビルド: `local_7.1.2_12.31.1.tipa`
-- GitHub Actions: `Package` run #3
-- Artifact ID: `11758656217`
+- NFB_Local: **7.1.3**
+- 最新ビルド候補: `local_7.1.3_12.31.1.tipa`
+- GitHub Actions: `Package` run #4
+- Run ID: `38281189165`
+- Artifact ID: `11760958389`
+- Artifact size: `257037479` bytes
 - Artifact SHA-256:
-  `0a3b5caaed173b9b23811f5c0d2f0b5440773b923bbf69686d5cd7cdffdcda97`
+  `dd2a73e436135f4bffc29ccfed23865bf4e9fec0cbc289cd991c599dd899f54d`
 
-この値は将来の本家更新後には古くなる。更新時はこの章も更新すること。
+### 検証状態
+
+run #4で以下は成功済み:
+
+- Source compile
+- `HomeBars.x` compile
+- TrollStore base取得
+- dylib差し替え
+- CydiaSubstrate dependency補正
+- Mach-O install name維持
+- `ldid`署名
+- ZIP integrity check
+- Artifact upload
+
+`local_7.1.3_12.31.1.tipa` の**実機での再起動時タブ選択修正は未検証**。
+ユーザーの実機確認後にこの記述を更新すること。
+
+直前の実機確認済み版:
+
+- `local_7.1.2_12.31.1.tipa`
+- 起動成功
+- 「おすすめ」非表示自体は設定ON/OFF後に機能
+- ただし再起動時に2つ目の固定/カスタムタイムラインが選択される問題を確認
 
 ---
 
-## 3. このプロジェクトで追加した主な機能
+## 3. 日本語ローカライズ
 
-### 3.1 設定画面の日本語化
+本家英語設定をmasterとして、日本語設定を追従する。
 
-本家の日本語ローカライズを点検し、英語側とのキー差分を埋めた。
+過去の検査結果:
 
-当時の検査結果:
-
-- `ja` = **293/293 (100%)**
-
-補完した例:
-
-- macOSアプリアイコン変更関連エラー文
-- `Cool kids`
-- 新規追加した「おすすめ」非表示設定
-
-日本語化の基準:
-
-- 英語 `Localizable.strings` をmasterとして扱う。
-- `check_localization.py` を使用する。
-- 更新時は少なくとも以下を確認すること。
-
-```bash
-./check_localization.py ja
-./check_localization.py ja --values
-```
-
-- 新規キー、空値、英語のまま残った値を確認し、日本語へ補完する。
-- 固有名詞 (`NeoFreeBird`, `Grok`, `OK` 等) は無理に翻訳しない。
+- `ja` = **293/293 translated (100%)**
 
 主要ファイル:
 
 - `layout/Library/Application Support/BHT/BHTwitter.bundle/en.lproj/Localizable.strings`
 - `layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings`
 
+更新時の確認:
+
+```bash
+./check_localization.py ja
+./check_localization.py ja --values
+```
+
+本家更新で:
+
+- 新規設定キー
+- 英語文言変更
+- 日本語欠落
+- 英語のまま残った値
+
+を確認し、日本語へ補完する。
+
+固有名詞 (`NeoFreeBird`, `Grok`, `OK` 等) は必要がなければ翻訳しない。
+
+このプロジェクトで追加した主な日本語:
+
+- `HIDE_FOR_YOU_TAB_TITLE`
+- `HIDE_FOR_YOU_TAB_DETAIL`
+- macOSアプリアイコン変更エラー文
+- その他不足していた設定文字列
+
 ---
 
-### 3.2 ホームの「おすすめ」タブ非表示
+## 4. 「おすすめ」タブ非表示
 
 追加設定キー:
 
 - `hide_for_you_tab`
 
-日本語表示:
-
-- タイトル: `「おすすめ」タブを非表示`
-- 説明: ホームタイムラインから「おすすめ」を除外し、「フォロー中」および固定/カスタムタイムラインを維持する趣旨。
-
-現在の初期値:
+現在のdefault:
 
 - **OFF**
+
+ユーザーから明示指示がない限り勝手にdefault ONへ変更しない。
 
 設定定義:
 
 - `src/Core/BHTSettings.m`
 
-設定切り替え処理:
+設定画面イベント:
 
 - `src/Settings/Pages/TimelinesSettingsViewController.m`
 
-ホームフック本体:
+フック本体:
 
 - `src/Hooks/HomeBars.x`
 
-#### 実装方針
+日本語表示:
 
-単純にビューを隠すのではなく、ホームのタブDataSourceで「おすすめ」に対応するsource index 0を除外し、表示側indexを `+1` してsourceへ渡す。
+- タイトル: `「おすすめ」タブを非表示`
+- 説明: おすすめだけを除外し、Followingと固定/カスタムタイムラインを維持する趣旨。
 
-これにより:
+### 4.1 X 12.31.1の基本実装
 
-- おすすめ = 非表示
-- フォロー中 = 維持
-- 固定/カスタムタイムライン = 維持
+X/Twitter 12.31.1本体を実際に解析し、Home Timelineの現行selectorを確認した。
+XNotForMeのX 12.3向けコードだけを根拠にしないこと。
 
-を狙う。
-
-さらに:
-
-- `selectTimelineVariant:shouldRefresh:` でおすすめ (variant 0) を要求された場合、Following (variant 1) へリダイレクト。
-- `THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier` を `latest` に設定。
-- 設定ON時は `applyHideForYouSetting()` からタブ再読込。
-- `viewDidAppear:` でもFollowing選択を再適用。
-
-#### X 12.31.1で確認した現行セレクタ
-
-X 12.31.1本体をActions上で直接診断して確認した。
-旧XNotForMe (X 12.3向け) のみを根拠にしないこと。
-
-12.31.1で使用する主なセレクタ:
+主な12.31.1 selector:
 
 - `numberOfTabsIn:`
 - `segmentedViewController:descriptorAtIndex:`
@@ -146,70 +156,134 @@ X 12.31.1本体をActions上で直接診断して確認した。
 - `segmentedViewController:didTapTabAtIndex:`
 - `segmentedViewController:didLongPressAtIndex:`
 
-互換目的で旧X 12.3系の以下も残している:
+互換目的で旧12.3系も残している:
 
 - `numberOfTabsV1In:`
 - `numberOfTabsV2In:`
 - `unifiedSegmentedController:...`
 
-### 既知の挙動
+### 4.2 タブのindex変換
 
-`local_7.1.2_12.31.1.tipa` 実機確認時:
+12.31.1では概念上:
 
-- 新規インストール/初期起動直後は「おすすめ」タブが表示された。
-- 設定の「おすすめタブを非表示」を一度ON/OFF切り替えすると、非表示は正常に機能した。
+- source index 0 = For You / おすすめ
+- source index 1 = Following / フォロー中
+- source index 2以降 = pinned/custom timelines
 
-つまりフックそのものは機能しているが、**初回ホーム構築時の設定反映/再読込タイミングに未解決の余地がある**。
-今後修正する場合は、設定保存後ではなくホームタブDataSource初回構築時から確実に設定値が参照されるか確認すること。
+`hide_for_you_tab` ON時:
 
-ユーザーは現在の設定を一度切り替えて使用できている。
+- `numberOfTabsIn:` は1つ減らす。
+- visible index N は source index N+1 へ渡す。
+
+したがって表示上:
+
+- visible 0 -> source 1 = Following
+- visible 1 -> source 2 = 1つ目の固定/カスタムtimeline
+- visible 2 -> source 3 ...
+
+この**visible index と source index の区別が最重要**。
+
+### 4.3 7.1.2で発生した再起動時の選択ずれ
+
+実機報告:
+
+- おすすめ非表示は機能する。
+- しかしアプリを再起動すると、Followingではなく**2つ目の表示タブ（最初の固定/カスタムtimeline）**が選択された状態で開く。
+
+原因:
+
+7.1.2では、上記のindex remapに加えて:
+
+- `THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier = latest`
+- lifecycle時に `selectTimelineVariant(..., 1, ...)` 相当でFollowingを強制
+
+という「source index 1を選ぶ」処理も行っていた。
+
+For Youを削除した後のvisible stripではFollowingはvisible index 0であり、`1` を重ねて強制すると復元経路によってはvisible index 1として扱われ、次のtimelineへずれる。
+
+### 4.4 7.1.3の修正
+
+7.1.3では、**表示indexのremapを唯一の基準**にする。
+
+変更点:
+
+- lifecycleでvariant 1を積極的に強制する処理を削除。
+- `latest` を保存して復元させる方式を削除。
+- `ClearHiddenHomeSelection()` を追加。
+- `hide_for_you_tab` ON時は
+  `THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier`
+  を削除する。
+- `viewDidLoad` の `%orig` より前に保存済み選択を削除する。
+- X側にはshortened stripのvisible index 0から初期化させる。
+- visible index 0はDataSource remapによりsource index 1 (Following)になる。
+- `viewDidAppear:` ではvariant 1を強制せず、保存済み選択だけをクリアする。
+- 設定ON/OFF時は `applyHideForYouSetting()` から選択状態クリア + segmented controller reloadを行う。
+
+なお、X内部が明示的にalgorithmic variant 0を要求した場合の:
+
+- `selectTimelineVariant:shouldRefresh:`
+- `selectFilteredTimelineVariant:shouldRefresh:`
+
+の `0 -> 1` リダイレクトは残している。
+
+**もし7.1.3でも再起動時に2つ目のtimelineへずれる場合、次に疑うのはこのvariant redirectか、LegacySegmented controller側のselected-index復元処理。推測で追加修正せず、12.31.1本体からselected/select/index系selectorを追加解析すること。**
+
+### 4.5 設定画面側
+
+`TimelinesSettingsViewController.m` は現在:
+
+- `hide_custom_timelines` -> `applyHideCustomTimelinesSetting()`
+- `hide_for_you_tab` -> `applyHideForYouSetting()`
+
+だけを呼ぶ。
+
+古い `setObject:@"latest"` 処理は残っていない。
 
 ---
 
-## 4. TrollStoreパッケージングで重要な修正
+## 5. TrollStoreパッケージング — 絶対に維持する処理
 
-### 4.1 旧方式で発生した起動直後クラッシュ
+### 5.1 過去の起動直後クラッシュ
 
-最初は、本家配布済みTwitter TrollStore `.tipa` を展開し、新規ビルドした `BHTwitter.dylib` を単純差し替えしていた。
-その結果、アプリがアイコンタップ直後にクラッシュした。
+初期実装では、本家Twitter TrollStore `.tipa` を展開し、新しくビルドした `BHTwitter.dylib` を単純差し替えした。
+その結果、アイコンタップ直後にクラッシュした。
 
-実ファイル比較で原因候補を特定:
+比較結果:
 
-本家配布版 `BHTwitter.dylib`:
+本家配布版:
 
 ```text
 @rpath/CydiaSubstrate.framework/CydiaSubstrate
 ```
 
-Theosで新規ビルドしたdylib:
+Theos新規build:
 
 ```text
 /Library/Frameworks/CydiaSubstrate.framework/CydiaSubstrate
 ```
 
-本家TrollStore版では `CydiaSubstrate.framework` はアプリ内 `Frameworks` に存在するため、絶対パスのままではdyld段階で即終了し得る。
+本家TrollStore版では `CydiaSubstrate.framework` はアプリ内 `Frameworks` にあるため、新規dylibの絶対パス依存はdyldクラッシュ原因になる。
 
-### 4.2 現在の正しい再梱包方法
+### 5.2 正しいAssemble処理
 
-`.github/workflows/package.yml` の `Assemble` で:
+`.github/workflows/package.yml` で必ず以下を行う:
 
-1. 本家Twitter TrollStore版 `.tipa` を展開。
-2. 本家内の元 `BHTwitter.dylib` から:
-   - CydiaSubstrate dependency
-   - Mach-O install name
-   を取得。
-3. 新規ビルドdylibを差し替え。
-4. `install_name_tool` で新規dylibの依存先を本家と同一に補正。
-5. install nameも本家に合わせる。
-6. `ldid -S` でdylibを署名。
-7. 補正結果を `otool` で検証。
-8. `BHTwitter.bundle` をNFB_Local版へ差し替え。
-9. Info.plistから以下を削除:
-   - `TSPreAppliedExploitType`
-   - `TSBundlePreSigned`
-10. 再ZIPして `.tipa` を生成。
+1. 本家Twitter TrollStore `.tipa` を展開。
+2. 元 `BHTwitter.dylib` からCydiaSubstrate dependencyを取得。
+3. 元dylibのMach-O install nameも取得。
+4. 新規 `BHTwitter.dylib` を差し替え。
+5. `install_name_tool` でdependencyを本家と同一に補正。
+6. install nameも本家と同一にする。
+7. `ldid -S` でdylibを署名。
+8. `otool` で補正結果を検証。
+9. `BHTwitter.bundle` をローカル版へ差し替え。
+10. Info.plistから以下を削除:
+    - `TSPreAppliedExploitType`
+    - `TSBundlePreSigned`
+11. `.tipa`へ再ZIP。
+12. `unzip -tq` でintegrity check。
 
-run #3で確認済み:
+7.1.3 / run #4でも確認済み:
 
 ```text
 Base substrate dependency: @rpath/CydiaSubstrate.framework/CydiaSubstrate
@@ -221,36 +295,34 @@ Patched substrate dependency: @rpath/CydiaSubstrate.framework/CydiaSubstrate
 
 ---
 
-## 5. Package Workflow
+## 6. Package Workflow
 
-主要Workflow:
+ファイル:
 
 - `.github/workflows/package.yml`
-- Actions表示名: `Package`
-- 通常は `workflow_dispatch` の手動実行。
 
-### ベースパッケージ選択
+Actions表示名:
 
-本家 `NeoFreeBird/app` のreleaseから以下の正規表現に一致するものだけを使用:
+- `Package`
+
+通常トリガー:
+
+- `workflow_dispatch` のみ
+
+検証目的で一時的にpush triggerを追加する場合は、ビルド完了後必ず削除してmanual-onlyへ戻す。
+
+### ベース選択
+
+本家releaseから以下に一致するassetだけを選ぶ:
 
 ```regex
 ^NeoFreeBird-trollstore-Twitter_.*\.tipa$
 ```
 
-つまり、**TwitterブランドのTrollStore版のみ**。
-
-`base_tag` が空なら本家latest releaseを使用。
+`base_tag` 空欄時は本家latest release。
 必要なら特定tagを指定可能。
 
-### ビルド
-
-- macOS GitHub hosted runner
-- Theos
-- iOS SDK default 16.5
-- deployment target default 15.0
-- ffmpeg buildをActions cacheで再利用
-
-出力命名:
+### 出力名
 
 ```text
 local_<NFB_Local Version>_<Twitter App Version>.tipa
@@ -259,22 +331,28 @@ local_<NFB_Local Version>_<Twitter App Version>.tipa
 例:
 
 ```text
-local_7.1.2_12.31.1.tipa
+local_7.1.3_12.31.1.tipa
 ```
 
 ---
 
-## 6. 本家更新時の追従手順
+## 7. 本家更新時の追従手順
 
-本家 `NeoFreeBird/app` に新しいrelease / source updateがあった場合、以下の順序で更新する。
+本家 `NeoFreeBird/app` にrelease/source updateがあった場合:
 
-### 6.1 まず差分確認
+1. 現在のNFB_Localと本家v7の差分を確認。
+2. 本家変更を丸ごと上書きしない。
+3. 本家の修正・新機能を取り込む。
+4. ローカル独自変更を再適用/維持。
+5. 英語Localizableと日本語Localizableを比較して新規・変更設定を日本語化。
+6. `check_localization.py ja` / `ja --values` を実行。
+7. `hide_for_you_tab` を維持。
+8. 新しいTwitter/XバージョンでHome Timeline内部APIが変わっていれば実バイナリを解析して適応。
+9. TrollStore `@rpath`補正等のPackage処理を維持。
+10. Compile / Assemble / Artifact生成まで確認。
+11. 重要な結果をこの `PROJECT_STATE.md` に反映。
 
-- 本家の新しい `v7` / releaseと、現在のNFB_Localを比較。
-- 本家変更を丸ごと上書きしない。
-- ローカル変更と競合するファイルを特定する。
-
-特に確認するファイル:
+特に競合確認するファイル:
 
 - `src/Hooks/HomeBars.x`
 - `src/Core/BHTSettings.m`
@@ -285,138 +363,113 @@ local_7.1.2_12.31.1.tipa
 - `.github/workflows/package.yml`
 - `control`
 
-### 6.2 本家機能を取り込む
+### Home Timeline互換性
 
-- 本家のバグ修正・新機能・設定変更をNFB_Localへ取り込む。
-- ローカル独自変更を消さない。
-
-### 6.3 日本語化更新
-
-- English masterとJapaneseを比較。
-- 新規キー/変更された英語を日本語化。
-- `check_localization.py ja` / `--values` で確認。
-
-### 6.4 「おすすめ」非表示を再適用
-
-重要:
-
-**古いセレクタを盲目的に再適用しない。**
-
-新しいTwitter/X本体バージョンでホームタイムライン実装が変わっている可能性がある。
-必要なら本家配布 `.tipa` 内のTwitter Mach-Oから:
+古いselectorを盲目的に再利用しない。
+新しいbase `.tipa` 内のTwitter Mach-Oから必要に応じて:
 
 - HomeTimelineContainer
 - `numberOfTabs*`
-- segmented controller data source
-- `selectTimelineVariant*`
+- segmented controller
+- selected/select/index
+- TimelineVariant
 - Following / ForYou / latest
 
-等のObjective-C method name / printable stringsを直接確認する。
-
-そのバージョンに合わせて `hide_for_you_tab` 実装を調整する。
-
-### 6.5 Package処理を維持
-
-- TwitterブランドTrollStore版を基準にする。
-- CydiaSubstrate dependencyの本家→新規dylibへのコピー補正を維持。
-- `TSPreAppliedExploitType` / `TSBundlePreSigned` の削除を維持。
-
-### 6.6 ビルド / 実機確認
-
-最低限:
-
-- Compile成功
-- Assemble成功
-- `@rpath/CydiaSubstrate.framework/CydiaSubstrate` へ補正済み
-- ZIP integrity check成功
-- Artifact upload成功
-
-実機では:
-
-- 起動できる
-- Twitterブランド
-- NeoFreeBird設定画面が日本語
-- `「おすすめ」タブを非表示` が機能
-- Followingが使用可能
-- 固定/カスタムタイムラインを壊していない
-
-を確認する。
+を直接確認する。
 
 ---
 
-## 7. 自動更新監視
+## 8. 自動更新監視
 
-ChatGPT側に **「NeoFreeBird追従更新」** という条件監視タスクを設定済み。
+ChatGPT側に条件監視タスク **「NeoFreeBird追従更新」** を設定済み。
 
-目的:
+方針:
 
-- 本家に意味のある更新があるか定期確認。
-- 更新がなければ通知しない。
-- 更新があればNFB_Localへの取り込み、日本語化、`hide_for_you_tab` 再適用、TrollStore package/buildまで進める。
-- 安全に解決できない競合は、動作中の版を無理に壊さずユーザーへ通知する。
-
-別チャットでこのタスクが見えない/利用できない場合でも、上記方針を手動で実施すればよい。
+- 本家更新がなければ通知しない。
+- 更新があればNFB_Localへ取り込み。
+- 日本語化を更新。
+- `hide_for_you_tab` を維持・必要なら新Twitter版へ適応。
+- TrollStore Package/buildまで進める。
+- 安全に解決できない競合は動作中の版を壊さず通知する。
 
 ---
 
-## 8. 過去に誤った判断 / 戻してはいけない点
+## 9. 過去の重要な失敗 / 戻してはいけない点
 
-### 「おすすめ」セレクタについて
+### 9.1 単純dylib差し替え
 
-途中でXNotForMeの現行実装を誤認し、12.31.1の実装を推測してセレクタを変更したことがある。
-その後、12.31.1本体を直接解析して `numberOfTabsIn:` 系が存在することを確認した。
+不可。
+CydiaSubstrate dependencyが `/Library/Frameworks/...` のままになり、起動直後クラッシュした。
+必ず本家の `@rpath/...` へ補正する。
 
-今後は外部tweakの対応バージョンと、実際に使用するTwitter/Xバージョンを必ず区別すること。
+### 9.2 TrollStore再署名だけを原因と決めつけない
 
-### 起動クラッシュについて
-
-「TrollStoreの再署名だけが原因」と初期判断したが、それだけでは直らなかった。
-最終的に新規dylibのCydiaSubstrate依存パス差異を確認し、`@rpath` 補正で起動するようになった。
-
-よって、今後起動直後クラッシュが再発したら最初に:
+過去に署名だけが原因と仮定したが、それだけでは直らなかった。
+起動直後クラッシュ時はまず:
 
 ```bash
 otool -L BHTwitter.dylib
 otool -D BHTwitter.dylib
 ```
 
-で本家版と新規版を比較すること。
+で本家dylibと比較する。
+
+### 9.3 XNotForMeの対応版を混同しない
+
+XNotForMeの公開実装はX 12.3向け。
+NFB_Localの現行baseはTwitter/X 12.31.1。
+外部tweakのselectorをそのまま現行版とみなさず、必要なら実バイナリで確認する。
+
+### 9.4 source indexとvisible indexを混同しない
+
+For Youを削除すると:
+
+- Followingはsource index 1
+- しかしvisible index 0
+
+になる。
+
+複数timelineを残す設計では、source index 1を「選択index 1」として強制してはいけない。
+7.1.2の再起動時選択ずれはこの設計ミスが原因と考えられる。
 
 ---
 
-## 9. 現在の既知課題
+## 10. 現在の既知課題 / 要実機確認
 
-1. `hide_for_you_tab` は実機で機能するが、初回起動時にはおすすめが表示され、一度設定をON/OFFした後に正常反映された。
-   - 初回DataSource構築/設定反映タイミングの改善余地あり。
+1. **7.1.3再起動時選択修正**
+   - build成功。
+   - 実機確認待ち。
+   - 期待動作: おすすめ非表示ONで再起動してもFollowing（先頭の表示タブ）から開始する。
 
-2. 本家更新でTwitter/Xの内部クラス・セレクタが変わる可能性がある。
-   - 更新時に実バイナリを確認すること。
+2. **初回/設定変更直後のUI反映**
+   - 過去版では設定ON/OFF後に非表示が確実に反映された。
+   - 7.1.3では `applyHideForYouSetting()` でreloadする。
+   - 新規インストール時のdefaultはOFFなので、初期状態でFor Youが見えること自体は仕様。
 
-3. 現在 `hide_for_you_tab` defaultはOFF。
-   - ユーザーから明示指示がない限り勝手にdefault ONへ変更しない。
-
----
-
-## 10. 次チャット開始時の推奨プロンプト
-
-次のチャットで作業を継続する場合は、以下のように指示すればよい。
-
-> `oxUNKNOWNxo/NFB_Local` の `PROJECT_STATE.md` を最初に読み、その内容を基準に現在のmainを確認してから作業を続けてください。過去の単純dylib差し替え方式や古いHome Timelineセレクタへ戻さないでください。
+3. **本家更新時の内部API変更**
+   - 新Twitter/X版でselectorが変わる可能性あり。
+   - 必要なら毎回実バイナリを確認する。
 
 ---
 
-## 11. 更新ルール
+## 11. 次チャット開始時の推奨指示
 
-NFB_Localへ重要な修正を行った場合は、同じ作業内でこの `PROJECT_STATE.md` も更新すること。
+> `oxUNKNOWNxo/NFB_Local` の `PROJECT_STATE.md` を最初に読み、その内容を基準に現在のmainを確認してから作業を続けてください。特にTrollStoreの@rpath補正、Twitterブランド基準、hide_for_you_tabのvisible/source index設計を維持し、過去の単純dylib差し替え方式や古いHome Timeline selectorへ戻さないでください。
 
-特に必ず更新する項目:
+---
+
+## 12. 更新ルール
+
+NFB_Localへ重要な修正を行った場合は、同じ作業内でこの `PROJECT_STATE.md` も更新する。
+
+特に更新する項目:
 
 - 本家NeoFreeBirdバージョン
 - Twitter/Xアプリバージョン
 - NFB_Localバージョン
-- 最新成功Artifact / SHA-256
+- 最新build / Artifact ID / SHA-256
 - `hide_for_you_tab` の互換実装
-- Package方式に変更があった場合
-- 新しい既知問題と解決済み問題
-
-このファイルを古い状態のまま放置しないこと。
+- Package方式の変更
+- 新しい既知問題
+- 解決済み問題
+- 実機検証結果
