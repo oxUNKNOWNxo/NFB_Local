@@ -52,6 +52,10 @@ void BHTApplyDimToVideoControls(UIView* controlsView);
 // Live pinned-tabs refresh when the hide setting is toggled (Timeline.x)
 void applyHideCustomTimelinesSetting(void);
 
+// Home visible-tab preservation while For You is hidden (HomeBars.x)
+void saveHomeTimelineSelectionBeforeResignActive(void);
+void restoreHomeTimelineSelectionAfterBecomeActive(void);
+
 // Whether the account genuinely has a panel's tab, ignoring the forced tab
 // gates (FeatureSwitches.x)
 BOOL panelIsGenuinelyAvailable(long long panelID);
