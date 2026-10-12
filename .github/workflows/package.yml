@@ -18,6 +18,9 @@ on:
         default: ""
         required: false
         type: string
+  push:
+    paths:
+      - '.run_package'
 
 concurrency:
   group: package-${{ github.ref }}
@@ -152,11 +155,46 @@ jobs:
 
           OLD_DYLIB=$(find "$APP" -type f -name 'BHTwitter.dylib' | head -n1)
           OLD_BUNDLE=$(find "$APP" -type d -name 'BHTwitter.bundle' | head -n1)
+          NEW_DYLIB="main/.theos/obj/debug/BHTwitter.dylib"
           test -n "$OLD_DYLIB"
           test -n "$OLD_BUNDLE"
+          test -f "$NEW_DYLIB"
 
-          cp main/.theos/obj/debug/BHTwitter.dylib "$OLD_DYLIB"
+          # cyan rewrites jailbreak-only Mach-O paths for an embedded app. Preserve
+          # the exact dependency and install-name used by the known-good upstream
+          # TrollStore build before replacing its BHTwitter binary.
+          BASE_SUBSTRATE_DEP=$(otool -L "$OLD_DYLIB" | awk '/CydiaSubstrate\.framework\/CydiaSubstrate/ {print $1; exit}')
+          NEW_SUBSTRATE_DEP=$(otool -L "$NEW_DYLIB" | awk '/CydiaSubstrate\.framework\/CydiaSubstrate/ {print $1; exit}')
+          BASE_ID=$(otool -D "$OLD_DYLIB" 2>/dev/null | sed -n '2p' || true)
+          NEW_ID=$(otool -D "$NEW_DYLIB" 2>/dev/null | sed -n '2p' || true)
+
+          echo "Base substrate dependency: ${BASE_SUBSTRATE_DEP:-<none>}"
+          echo "Built substrate dependency: ${NEW_SUBSTRATE_DEP:-<none>}"
+          echo "Base install name: ${BASE_ID:-<none>}"
+          echo "Built install name: ${NEW_ID:-<none>}"
+
+          cp "$NEW_DYLIB" "$OLD_DYLIB"
+
+          if [ -n "${BASE_SUBSTRATE_DEP:-}" ] && [ -n "${NEW_SUBSTRATE_DEP:-}" ] && \
+             [ "$BASE_SUBSTRATE_DEP" != "$NEW_SUBSTRATE_DEP" ]; then
+            install_name_tool -change "$NEW_SUBSTRATE_DEP" "$BASE_SUBSTRATE_DEP" "$OLD_DYLIB"
+          fi
+
+          if [ -n "${BASE_ID:-}" ] && [ "$BASE_ID" != "$NEW_ID" ]; then
+            install_name_tool -id "$BASE_ID" "$OLD_DYLIB"
+          fi
+
           ldid -S "$OLD_DYLIB"
+
+          PATCHED_SUBSTRATE_DEP=$(otool -L "$OLD_DYLIB" | awk '/CydiaSubstrate\.framework\/CydiaSubstrate/ {print $1; exit}')
+          PATCHED_ID=$(otool -D "$OLD_DYLIB" 2>/dev/null | sed -n '2p' || true)
+          echo "Patched substrate dependency: ${PATCHED_SUBSTRATE_DEP:-<none>}"
+          echo "Patched install name: ${PATCHED_ID:-<none>}"
+          test -n "$BASE_SUBSTRATE_DEP"
+          test "$PATCHED_SUBSTRATE_DEP" = "$BASE_SUBSTRATE_DEP"
+          if [ -n "${BASE_ID:-}" ]; then
+            test "$PATCHED_ID" = "$BASE_ID"
+          fi
 
           rm -rf "$OLD_BUNDLE"
           cp -R "main/layout/Library/Application Support/BHT/BHTwitter.bundle" "$OLD_BUNDLE"
