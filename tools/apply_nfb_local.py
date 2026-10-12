@@ -155,3 +155,19 @@ replace_once(
 ''',
     'HIDE_FOR_YOU_TAB_TITLE'
 )
+
+ja_path = Path("layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings")
+ja_text = ja_path.read_text(encoding="utf-8")
+if '"COOL_KIDS_SECTION_HEADER_TITLE" = "Cool kids";' in ja_text:
+    ja_text = ja_text.replace(
+        '"COOL_KIDS_SECTION_HEADER_TITLE" = "Cool kids";',
+        '"COOL_KIDS_SECTION_HEADER_TITLE" = "クールな仲間たち";',
+        1,
+    )
+    print("ja Localizable.strings: translated Cool kids")
+
+if '"APP_ICON_SETTINGS_MAC_ALERT_TITLE"' not in ja_text:
+    ja_text += '''\n\n/* macOS app icon alert */\n"APP_ICON_SETTINGS_MAC_ALERT_TITLE" = "アイコンの変更に失敗";\n"APP_ICON_SETTINGS_MAC_ALERT_MESSAGE" = "macOSではアイコンを変更できません。これはApple側の制限です。";\n'''
+    print("ja Localizable.strings: added macOS app icon alert translations")
+
+ja_path.write_text(ja_text, encoding="utf-8")
