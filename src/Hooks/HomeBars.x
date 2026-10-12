@@ -13,7 +13,6 @@
 static __weak id ActiveHomeTimelineContainer;
 static NSString* const HomeTimelineTabSelectionKey =
     @"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier";
-static NSString* const FollowingTimelineTabIdentifier = @"latest";
 
 static BOOL HideForYouEnabled(void) {
     return [BHTSettings boolForKey:@"hide_for_you_tab"];
@@ -26,18 +25,17 @@ static NSInteger HomeSourceTabIndex(NSInteger visibleIndex) {
     return visibleIndex + 1;
 }
 
-static void ForceFollowingSelection(id container) {
+// With For You removed, visible index 0 already maps to source index 1
+// (Following). Persisting the original `latest`/source-index selection makes X
+// restore index 1 on the shortened tab strip, which points at the next pinned
+// timeline. Keep the hidden-mode selection unset so X starts from visible index
+// 0 and the data-source remap supplies Following.
+static void ClearHiddenHomeSelection(void) {
     if (!HideForYouEnabled()) {
         return;
     }
 
-    [[NSUserDefaults standardUserDefaults] setObject:FollowingTimelineTabIdentifier
-                                              forKey:HomeTimelineTabSelectionKey];
-
-    if ([container respondsToSelector:@selector(selectTimelineVariant:shouldRefresh:)]) {
-        ((void (*)(id, SEL, NSInteger, BOOL))objc_msgSend)(
-            container, @selector(selectTimelineVariant:shouldRefresh:), 1, NO);
-    }
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:HomeTimelineTabSelectionKey];
 }
 
 static void ReloadHomeTimelineTabs(id container) {
@@ -59,7 +57,7 @@ static void ReloadHomeTimelineTabs(id container) {
 void applyHideForYouSetting(void) {
     id container = ActiveHomeTimelineContainer;
     if (HideForYouEnabled()) {
-        ForceFollowingSelection(container);
+        ClearHiddenHomeSelection();
     }
     ReloadHomeTimelineTabs(container);
 }
@@ -123,6 +121,15 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 // The repository publishes the pinned list through this single delegate call, so
 // handing it an empty array hides the tabs without touching persisted state.
 %hook _TtC32TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
+
+// Clear the source-index selection before X restores the home tab. Once For You
+// is removed, the first visible tab is Following and must be selected as index 0.
+- (void)viewDidLoad {
+    if (HideForYouEnabled()) {
+        ClearHiddenHomeSelection();
+    }
+    %orig;
+}
 
 // X 12.31.1 uses LegacySegmentedViewControllerDataSource selectors. Index 0 is
 // For You and index 1 is Following. Hide index 0 and remap every visible index
@@ -218,7 +225,8 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 
 // If Home explicitly requests the algorithmic variant while hiding it, redirect
 // only that request to Following. Other variants, including custom timelines,
-// remain available.
+// remain available. Do not proactively force variant 1 during lifecycle events:
+// on the shortened visible tab strip that can be interpreted as visible index 1.
 - (void)selectTimelineVariant:(NSInteger)variant shouldRefresh:(BOOL)shouldRefresh {
     if (HideForYouEnabled() && variant == 0) {
         variant = 1;
@@ -234,12 +242,10 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 }
 
 - (void)clearLastSelectedTabIdentifier {
-    if (HideForYouEnabled()) {
-        [[NSUserDefaults standardUserDefaults] setObject:FollowingTimelineTabIdentifier
-                                                  forKey:HomeTimelineTabSelectionKey];
-        return;
-    }
     %orig;
+    if (HideForYouEnabled()) {
+        ClearHiddenHomeSelection();
+    }
 }
 
 - (void)pinnedTimelinesRepository:(id)repository
@@ -264,7 +270,7 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
     %orig;
     ActiveHomeTimelineContainer = self;
     if (HideForYouEnabled()) {
-        ForceFollowingSelection(self);
+        ClearHiddenHomeSelection();
     }
     SyncHomeAddTabButton(self, [BHTSettings boolForKey:@"hide_custom_timelines"]);
 }
