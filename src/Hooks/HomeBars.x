@@ -14,11 +14,19 @@ static __weak id ActiveHomeTimelineContainer;
 static char HomeInitialSelectionFixedKey;
 static NSString* const HomeTimelineTabSelectionKey =
     @"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier";
-static NSString* const HomeRememberedVisibleIndexKey =
-    @"NFBLocal.hideForYou.lastVisibleIndex";
+
+// Session-only by design. A cold launch must always start on Following; only a
+// background/foreground transition inside the same process may restore a pinned
+// list, and only when the user enables restore_home_tab_selection.
+static NSInteger HomeSessionVisibleIndex = 0;
+static BOOL HomeColdLaunchSelectionApplied = NO;
 
 static BOOL HideForYouEnabled(void) {
     return [BHTSettings boolForKey:@"hide_for_you_tab"];
+}
+
+static BOOL RestoreHomeTabSelectionEnabled(void) {
+    return [BHTSettings boolForKey:@"restore_home_tab_selection"];
 }
 
 static NSInteger HomeSourceTabIndex(NSInteger visibleIndex) {
@@ -29,35 +37,14 @@ static NSInteger HomeSourceTabIndex(NSInteger visibleIndex) {
 }
 
 // With For You removed, visible index 0 maps to source index 1 (Following).
-// Keep the old persisted identifier cleared so it cannot compete with the
-// visible-index selection owned by LegacySegmentedViewController.
+// Keep the old persisted identifier cleared so Twitter cannot restore a source
+// index as though it were a visible index after the tab strip is shortened.
 static void ClearHiddenHomeSelection(void) {
     if (!HideForYouEnabled()) {
         return;
     }
 
     [[NSUserDefaults standardUserDefaults] removeObjectForKey:HomeTimelineTabSelectionKey];
-}
-
-static NSInteger RememberedHomeVisibleIndex(void) {
-    NSNumber* stored = [[NSUserDefaults standardUserDefaults]
-        objectForKey:HomeRememberedVisibleIndexKey];
-    if (![stored isKindOfClass:[NSNumber class]]) {
-        return 0;
-    }
-
-    NSInteger index = stored.integerValue;
-    return index >= 0 ? index : 0;
-}
-
-static void RememberHomeVisibleIndex(NSInteger index) {
-    if (index < 0) {
-        index = 0;
-    }
-
-    [[NSUserDefaults standardUserDefaults]
-        setInteger:index
-        forKey:HomeRememberedVisibleIndexKey];
 }
 
 static id HomeSegmentedController(id container) {
@@ -83,6 +70,18 @@ static NSInteger ValidHomeVisibleIndex(id container,
     }
 
     return index;
+}
+
+static NSInteger CurrentHomeVisibleIndex(id container) {
+    id segmentedController = HomeSegmentedController(container);
+    if (!segmentedController ||
+        ![segmentedController respondsToSelector:@selector(currentIndex)]) {
+        return 0;
+    }
+
+    NSInteger currentIndex = ((NSInteger (*)(id, SEL))objc_msgSend)(
+        segmentedController, @selector(currentIndex));
+    return ValidHomeVisibleIndex(container, segmentedController, currentIndex);
 }
 
 static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex) {
@@ -111,33 +110,23 @@ static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex
     }
 }
 
-// Called before T1AppDelegate's original applicationWillResignActive:. This is
-// intentionally BEFORE Twitter's own lifecycle handling so any internal restore
-// or index mutation that happens while resigning cannot overwrite the user's
-// actually visible tab. `currentIndex` belongs to LegacySegmentedViewController
-// and therefore is already in visible-index space.
+// Called BEFORE Twitter's own applicationWillResignActive:. If optional restore
+// is enabled, capture the tab that is actually visible before Twitter mutates or
+// persists any internal selection state. Otherwise explicitly forget it.
 void saveHomeTimelineSelectionBeforeResignActive(void) {
     if (!HideForYouEnabled()) {
+        HomeSessionVisibleIndex = 0;
         return;
     }
 
-    id container = ActiveHomeTimelineContainer;
-    id segmentedController = HomeSegmentedController(container);
-    if (!segmentedController ||
-        ![segmentedController respondsToSelector:@selector(currentIndex)]) {
-        return;
-    }
-
-    NSInteger currentIndex = ((NSInteger (*)(id, SEL))objc_msgSend)(
-        segmentedController, @selector(currentIndex));
-    currentIndex =
-        ValidHomeVisibleIndex(container, segmentedController, currentIndex);
-    RememberHomeVisibleIndex(currentIndex);
+    HomeSessionVisibleIndex = RestoreHomeTabSelectionEnabled()
+        ? CurrentHomeVisibleIndex(ActiveHomeTimelineContainer)
+        : 0;
 }
 
-// Called after T1AppDelegate's original applicationDidBecomeActive:. Twitter may
-// restore visible index 1 while becoming active, so apply our last known-good
-// visible index on the next main-loop turn, after its lifecycle work has settled.
+// Called AFTER Twitter's applicationDidBecomeActive:. Restore only within the
+// current process. A cold launch never reaches here with an existing Home
+// container; the first viewDidAppear: below always forces Following instead.
 void restoreHomeTimelineSelectionAfterBecomeActive(void) {
     if (!HideForYouEnabled()) {
         return;
@@ -149,12 +138,14 @@ void restoreHomeTimelineSelectionAfterBecomeActive(void) {
     }
 
     ClearHiddenHomeSelection();
+    NSInteger targetIndex =
+        RestoreHomeTabSelectionEnabled() ? HomeSessionVisibleIndex : 0;
+
     __weak id weakContainer = container;
     dispatch_async(dispatch_get_main_queue(), ^{
         id strongContainer = weakContainer;
         if (strongContainer && HideForYouEnabled()) {
-            ReloadHomeTimelineTabsAtIndex(
-                strongContainer, RememberedHomeVisibleIndex());
+            ReloadHomeTimelineTabsAtIndex(strongContainer, targetIndex);
         }
     });
 }
@@ -163,15 +154,30 @@ void applyHideForYouSetting(void) {
     id container = ActiveHomeTimelineContainer;
     if (HideForYouEnabled()) {
         ClearHiddenHomeSelection();
-        // Enabling the setting always begins from Following. Subsequent explicit
-        // user choices are preserved across background/foreground via currentIndex.
-        RememberHomeVisibleIndex(0);
+        HomeSessionVisibleIndex = 0;
+        // Enabling mid-session is itself an initialization point: start from
+        // Following and do not let a later viewDidAppear treat this as cold boot.
+        HomeColdLaunchSelectionApplied = YES;
         if (container) {
             objc_setAssociatedObject(
                 container, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
     }
     ReloadHomeTimelineTabsAtIndex(container, 0);
+}
+
+void applyRestoreHomeTabSelectionSetting(void) {
+    if (!HideForYouEnabled()) {
+        HomeSessionVisibleIndex = 0;
+        return;
+    }
+
+    if (RestoreHomeTabSelectionEnabled()) {
+        HomeSessionVisibleIndex = CurrentHomeVisibleIndex(ActiveHomeTimelineContainer);
+    } else {
+        HomeSessionVisibleIndex = 0;
+        ReloadHomeTimelineTabsAtIndex(ActiveHomeTimelineContainer, 0);
+    }
 }
 
 
@@ -234,9 +240,6 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 // handing it an empty array hides the tabs without touching persisted state.
 %hook _TtC32TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
 
-// Clear the old persisted source selection before X constructs Home. The actual
-// visible-index correction is performed once after the segmented controller has
-// finished appearing (see viewDidAppear: below).
 - (void)viewDidLoad {
     if (HideForYouEnabled()) {
         ClearHiddenHomeSelection();
@@ -385,19 +388,27 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 
     if (HideForYouEnabled() &&
         ![objc_getAssociatedObject(self, &HomeInitialSelectionFixedKey) boolValue]) {
-        // Initial construction still needs a one-shot correction because on cold
-        // launch applicationDidBecomeActive: can run before Home exists. Use the
-        // last visible index captured before the previous background transition.
         objc_setAssociatedObject(
             self, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         ClearHiddenHomeSelection();
+
+        // The first Home appearance in every process is a true cold-launch
+        // initialization point and MUST start on Following regardless of the
+        // optional restore setting. Later container recreation in the same
+        // process may reuse the session tab only when restore is enabled.
+        NSInteger targetIndex = 0;
+        if (HomeColdLaunchSelectionApplied && RestoreHomeTabSelectionEnabled()) {
+            targetIndex = HomeSessionVisibleIndex;
+        } else {
+            HomeSessionVisibleIndex = 0;
+        }
+        HomeColdLaunchSelectionApplied = YES;
 
         __weak id weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
             id strongSelf = weakSelf;
             if (strongSelf && HideForYouEnabled()) {
-                ReloadHomeTimelineTabsAtIndex(
-                    strongSelf, RememberedHomeVisibleIndex());
+                ReloadHomeTimelineTabsAtIndex(strongSelf, targetIndex);
             }
         });
     }
