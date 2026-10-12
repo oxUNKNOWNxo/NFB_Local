@@ -10,6 +10,7 @@
 
 extern void applyHideCustomTimelinesSetting(void);
 extern void applyHideForYouSetting(void);
+extern void applyRestoreHomeTabSelectionSetting(void);
 
 @implementation TimelinesSettingsViewController
 
@@ -25,6 +26,9 @@ extern void applyHideForYouSetting(void);
     }
     if ([key isEqualToString:@"hide_for_you_tab"]) {
         applyHideForYouSetting();
+    }
+    if ([key isEqualToString:@"restore_home_tab_selection"]) {
+        applyRestoreHomeTabSelectionSetting();
     }
 }
 
