@@ -93,6 +93,8 @@ static NSDictionary<NSString*, NSDictionary*>* BHTSettingsPages(void) {
                       @"default": @NO},
                     @{@"key": @"hide_custom_timelines",
                       @"default": @NO},
+                    @{@"key": @"hide_for_you_tab",
+                      @"default": @NO},
                     @{@"key": @"show_quote_numbers",
                       @"default": @NO},
                     @{@"key": @"show_unrounded_quote_numbers",

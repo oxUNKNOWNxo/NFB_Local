@@ -67,6 +67,74 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 // handing it an empty array hides the tabs without touching persisted state.
 %hook _TtC32TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
 
+// X 12.3 exposes the standard Home timelines through the unified segmented
+// controller. Index 0 is For You and index 1 is Following. When requested,
+// expose every tab except index 0 by shifting visible indices by one. This keeps
+// Following and any pinned/custom timelines intact instead of hiding the whole
+// selector bar.
+- (NSInteger)numberOfTabsV1In:(id)controller {
+    NSInteger count = %orig;
+    if (![BHTSettings boolForKey:@"hide_for_you_tab"]) {
+        return count;
+    }
+    return count > 0 ? count - 1 : 0;
+}
+
+- (NSInteger)numberOfTabsV2In:(id)controller {
+    NSInteger count = %orig;
+    if (![BHTSettings boolForKey:@"hide_for_you_tab"]) {
+        return count;
+    }
+    return count > 0 ? count - 1 : 0;
+}
+
+- (UIViewController*)unifiedSegmentedController:(id)controller
+                       v1ViewControllerAtIndex:(NSInteger)index {
+    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
+    return %orig(controller, sourceIndex);
+}
+
+- (NSString*)unifiedSegmentedController:(id)controller
+                         v1TitleAtIndex:(NSInteger)index {
+    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
+    return %orig(controller, sourceIndex);
+}
+
+- (NSString*)unifiedSegmentedController:(id)controller
+            v1AccessibilityLabelAtIndex:(NSInteger)index {
+    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
+    return %orig(controller, sourceIndex);
+}
+
+- (UIViewController*)unifiedSegmentedController:(id)controller
+                       v2ViewControllerAtIndex:(NSInteger)index {
+    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
+    return %orig(controller, sourceIndex);
+}
+
+- (id)unifiedSegmentedController:(id)controller
+             v2DescriptorAtIndex:(NSInteger)index {
+    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
+    return %orig(controller, sourceIndex);
+}
+
+// Some navigation paths request the algorithmic variant directly. Redirect only
+// that variant to Following; other variants (including custom timelines) remain
+// untouched.
+- (void)selectTimelineVariant:(NSInteger)variant shouldRefresh:(BOOL)shouldRefresh {
+    if ([BHTSettings boolForKey:@"hide_for_you_tab"] && variant == 0) {
+        variant = 1;
+    }
+    %orig(variant, shouldRefresh);
+}
+
+- (void)selectFilteredTimelineVariant:(NSInteger)variant shouldRefresh:(BOOL)shouldRefresh {
+    if ([BHTSettings boolForKey:@"hide_for_you_tab"] && variant == 0) {
+        variant = 1;
+    }
+    %orig(variant, shouldRefresh);
+}
+
 - (void)pinnedTimelinesRepository:(id)repository
     didChangeWithPinnedTimelineModels:(NSArray*)models {
     PinnedTimelinesRepository = repository;

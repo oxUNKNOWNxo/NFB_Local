@@ -258,6 +258,9 @@
 "HIDE_CUSTOM_TIMELINES_TITLE" = "Hide custom timelines";
 "HIDE_CUSTOM_TIMELINES_DETAIL" = "Remove the Add button from the home timeline tabs.";
 
+"HIDE_FOR_YOU_TAB_TITLE" = "Hide the For You tab";
+"HIDE_FOR_YOU_TAB_DETAIL" = "Remove only the For You tab from Home while keeping Following and pinned timelines. Restart X after changing this setting.";
+
 "RESTORE_REFRESH_SOUNDS_TITLE" = "Pull-to-refresh sounds";
 
 "HIDE_TRENDS_TITLE" = "Hide trending content";

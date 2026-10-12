@@ -258,6 +258,9 @@
 "HIDE_CUSTOM_TIMELINES_TITLE" = "カスタムタイムラインを非表示";
 "HIDE_CUSTOM_TIMELINES_DETAIL" = "ホームタイムラインのタブから「追加」ボタンを削除します。";
 
+"HIDE_FOR_YOU_TAB_TITLE" = "「おすすめ」タブを非表示";
+"HIDE_FOR_YOU_TAB_DETAIL" = "ホームから「おすすめ」タブだけを削除し、「フォロー中」と固定したタイムラインは残します。設定変更後はXを再起動してください。";
+
 "RESTORE_REFRESH_SOUNDS_TITLE" = "引っ張って更新のサウンド";
 
 "HIDE_TRENDS_TITLE" = "トレンドを非表示";
