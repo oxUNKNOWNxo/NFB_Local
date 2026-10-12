@@ -18,6 +18,9 @@ on:
         default: ""
         required: false
         type: string
+  push:
+    branches:
+      - main
 
 concurrency:
   group: package-${{ github.ref }}
