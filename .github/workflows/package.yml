@@ -18,9 +18,6 @@ on:
         default: ""
         required: false
         type: string
-  push:
-    paths:
-      - '.run_package'
 
 concurrency:
   group: package-${{ github.ref }}
@@ -160,9 +157,6 @@ jobs:
           test -n "$OLD_BUNDLE"
           test -f "$NEW_DYLIB"
 
-          # cyan rewrites jailbreak-only Mach-O paths for an embedded app. Preserve
-          # the exact dependency and install-name used by the known-good upstream
-          # TrollStore build before replacing its BHTwitter binary.
           BASE_SUBSTRATE_DEP=$(otool -L "$OLD_DYLIB" | awk '/CydiaSubstrate\.framework\/CydiaSubstrate/ {print $1; exit}')
           NEW_SUBSTRATE_DEP=$(otool -L "$NEW_DYLIB" | awk '/CydiaSubstrate\.framework\/CydiaSubstrate/ {print $1; exit}')
           BASE_ID=$(otool -D "$OLD_DYLIB" 2>/dev/null | sed -n '2p' || true)
