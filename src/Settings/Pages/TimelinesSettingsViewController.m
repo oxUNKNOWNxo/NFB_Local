@@ -9,6 +9,7 @@
 #import "Headers/TWHeaders.h"
 
 extern void applyHideCustomTimelinesSetting(void);
+extern void applyHideForYouSetting(void);
 
 @implementation TimelinesSettingsViewController
 
@@ -22,10 +23,8 @@ extern void applyHideCustomTimelinesSetting(void);
     if ([key isEqualToString:@"hide_custom_timelines"]) {
         applyHideCustomTimelinesSetting();
     }
-    if ([key isEqualToString:@"hide_for_you_tab"] && sender.isOn) {
-        [[NSUserDefaults standardUserDefaults]
-            setObject:@"latest"
-               forKey:@"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier"];
+    if ([key isEqualToString:@"hide_for_you_tab"]) {
+        applyHideForYouSetting();
     }
 }
 
