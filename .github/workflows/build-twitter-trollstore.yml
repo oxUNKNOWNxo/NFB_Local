@@ -193,7 +193,7 @@ jobs:
           ls -lh "$OUTPUT"
 
       - name: Upload Twitter TrollStore artifact
-        if: ${{ inputs.upload_artifact != false }}
+        if: ${{ github.event_name == 'push' || inputs.upload_artifact != false }}
         uses: actions/upload-artifact@v7
         with:
           name: NFB_Local-Twitter-TrollStore
