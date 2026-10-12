@@ -1,0 +1,202 @@
+name: Build Twitter TrollStore
+
+on:
+  workflow_dispatch:
+    inputs:
+      sdk_version:
+        description: "iOS SDK Version"
+        default: "16.5"
+        required: true
+        type: string
+      target_version:
+        description: "Target iOS Version"
+        default: "15.0"
+        required: true
+        type: string
+      official_release_tag:
+        description: "NeoFreeBird release tag to use as base (blank = latest)"
+        default: ""
+        required: false
+        type: string
+      upload_artifact:
+        description: "Upload the finished .tipa"
+        default: true
+        required: false
+        type: boolean
+  push:
+    paths:
+      - '.nfb_twitter_build'
+
+concurrency:
+  group: build-twitter-trollstore-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Twitter TrollStore
+    runs-on: macos-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout NFB Local
+        uses: actions/checkout@v6
+        with:
+          path: main
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install make dpkg ldid jq
+
+      - name: Add GNU Make to PATH
+        run: echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
+
+      - name: Download Theos
+        uses: actions/checkout@v6
+        with:
+          repository: theos/theos
+          ref: master
+          path: theos
+          submodules: recursive
+
+      - name: Cache iOS SDK
+        id: sdk
+        uses: actions/cache@v6
+        with:
+          path: theos/sdks/
+          key: iOS-${{ inputs.sdk_version || '16.5' }}-SDK
+
+      - name: Download iOS SDK
+        if: steps.sdk.outputs.cache-hit != 'true'
+        run: |
+          SDK_VERSION="${{ inputs.sdk_version || '16.5' }}"
+          git clone -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/ sdks
+          cd sdks
+          git sparse-checkout set --no-cone "iPhoneOS${SDK_VERSION}.sdk"
+          git checkout
+          mv ./*.sdk "$THEOS/sdks"
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Resolve official Twitter TrollStore build
+        id: official
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.official_release_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REQUESTED_TAG:-}" ]; then
+            API_URL="https://api.github.com/repos/NeoFreeBird/app/releases/tags/${REQUESTED_TAG}"
+          else
+            API_URL="https://api.github.com/repos/NeoFreeBird/app/releases/latest"
+          fi
+
+          RELEASE_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "$API_URL")
+
+          TAG=$(printf '%s' "$RELEASE_JSON" | jq -r '.tag_name')
+          ASSET_NAME=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .name' | head -n1)
+          ASSET_URL=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .browser_download_url' | head -n1)
+
+          if [ -z "$ASSET_NAME" ] || [ "$ASSET_NAME" = "null" ] || [ -z "$ASSET_URL" ] || [ "$ASSET_URL" = "null" ]; then
+            echo "No Twitter TrollStore asset found in release ${TAG}." >&2
+            exit 1
+          fi
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "asset_name=$ASSET_NAME" >> "$GITHUB_OUTPUT"
+          echo "asset_url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          echo "Using $TAG / $ASSET_NAME"
+
+      - name: Download official Twitter TrollStore build
+        env:
+          ASSET_URL: ${{ steps.official.outputs.asset_url }}
+        run: |
+          mkdir -p base
+          curl -fL --retry 3 "$ASSET_URL" -o base/NeoFreeBird-Twitter.tipa
+
+      - name: Compute ffmpeg cache key
+        id: ffmpeg-key
+        run: |
+          echo "key=ffmpeg-stack-$(git -C main rev-parse --short HEAD:deps/ffmpeg-kit-next/upstream)-${{ hashFiles('main/deps/ffmpeg-kit-next/build-ffmpeg.sh') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache ffmpeg stack
+        uses: actions/cache@v6
+        with:
+          path: |
+            ffmpeg-build
+            main/deps/ffmpeg-kit-next/build
+          key: ${{ steps.ffmpeg-key.outputs.key }}
+
+      - name: Compile NFB Local tweak
+        env:
+          THEOS: ${{ github.workspace }}/theos
+          BUILD_DIR: ${{ github.workspace }}/ffmpeg-build
+        run: |
+          set -euo pipefail
+          cd main
+          SDK_VERSION="${{ inputs.sdk_version || '16.5' }}"
+          TARGET_VERSION="${{ inputs.target_version || '15.0' }}"
+          sed -i '' "s/^TARGET.*$/TARGET := iphone:clang:${SDK_VERSION}:${TARGET_VERSION}/" Makefile
+          chmod +x deps/ffmpeg-kit-next/build-ffmpeg.sh
+          if [ ! -f deps/ffmpeg-kit-next/build/lib/libffmpegkit.a ]; then
+            git submodule update --init deps/ffmpeg-kit-next/upstream
+            deps/ffmpeg-kit-next/build-ffmpeg.sh
+          fi
+          make clean || true
+          make
+          test -f .theos/obj/debug/BHTwitter.dylib
+
+      - name: Replace tweak in official Twitter package
+        id: package
+        run: |
+          set -euo pipefail
+          rm -rf patched
+          mkdir patched
+          unzip -q base/NeoFreeBird-Twitter.tipa -d patched
+
+          APP=$(find patched/Payload -maxdepth 2 -type d -name '*.app' | head -n1)
+          if [ -z "$APP" ]; then
+            echo "Twitter.app not found in official package." >&2
+            exit 1
+          fi
+
+          OLD_DYLIB=$(find "$APP" -type f -name 'BHTwitter.dylib' | head -n1)
+          OLD_BUNDLE=$(find "$APP" -type d -name 'BHTwitter.bundle' | head -n1)
+          if [ -z "$OLD_DYLIB" ] || [ -z "$OLD_BUNDLE" ]; then
+            echo "Existing NeoFreeBird dylib/bundle not found in official Twitter package." >&2
+            find "$APP" -maxdepth 4 -iname '*BHTwitter*' -print || true
+            exit 1
+          fi
+
+          cp main/.theos/obj/debug/BHTwitter.dylib "$OLD_DYLIB"
+          ldid -S "$OLD_DYLIB"
+
+          rm -rf "$OLD_BUNDLE"
+          cp -R "main/layout/Library/Application Support/BHT/BHTwitter.bundle" "$OLD_BUNDLE"
+
+          X_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          LOCAL_VERSION=$(awk '/^Version:/ {print $2}' main/control)
+          OUTPUT="NFB_Local-trollstore-Twitter_${LOCAL_VERSION}_${X_VERSION}.tipa"
+
+          (
+            cd patched
+            zip -qry "../$OUTPUT" Payload
+          )
+
+          echo "filename=$OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "x_version=$X_VERSION" >> "$GITHUB_OUTPUT"
+          ls -lh "$OUTPUT"
+
+      - name: Upload Twitter TrollStore artifact
+        if: ${{ inputs.upload_artifact != false }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: NFB_Local-Twitter-TrollStore
+          path: ${{ steps.package.outputs.filename }}
+          archive: false
+          if-no-files-found: error
