@@ -8,6 +8,63 @@
 #import "HookHelpers.h"
 
 
+// MARK: - Home timeline tabs
+
+static __weak id ActiveHomeTimelineContainer;
+static NSString* const HomeTimelineTabSelectionKey =
+    @"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier";
+static NSString* const FollowingTimelineTabIdentifier = @"latest";
+
+static BOOL HideForYouEnabled(void) {
+    return [BHTSettings boolForKey:@"hide_for_you_tab"];
+}
+
+static NSInteger HomeSourceTabIndex(NSInteger visibleIndex) {
+    if (!HideForYouEnabled() || visibleIndex < 0) {
+        return visibleIndex;
+    }
+    return visibleIndex + 1;
+}
+
+static void ForceFollowingSelection(id container) {
+    if (!HideForYouEnabled()) {
+        return;
+    }
+
+    [[NSUserDefaults standardUserDefaults] setObject:FollowingTimelineTabIdentifier
+                                              forKey:HomeTimelineTabSelectionKey];
+
+    if ([container respondsToSelector:@selector(selectTimelineVariant:shouldRefresh:)]) {
+        ((void (*)(id, SEL, NSInteger, BOOL))objc_msgSend)(
+            container, @selector(selectTimelineVariant:shouldRefresh:), 1, NO);
+    }
+}
+
+static void ReloadHomeTimelineTabs(id container) {
+    if (!container || ![container respondsToSelector:@selector(segmentedViewController)]) {
+        return;
+    }
+
+    id segmentedController =
+        ((id (*)(id, SEL))objc_msgSend)(container, @selector(segmentedViewController));
+    if ([segmentedController respondsToSelector:@selector(reloadData)]) {
+        ((void (*)(id, SEL))objc_msgSend)(segmentedController, @selector(reloadData));
+    }
+    if ([segmentedController respondsToSelector:@selector(view)]) {
+        UIView* view = ((id (*)(id, SEL))objc_msgSend)(segmentedController, @selector(view));
+        [view setNeedsLayout];
+    }
+}
+
+void applyHideForYouSetting(void) {
+    id container = ActiveHomeTimelineContainer;
+    if (HideForYouEnabled()) {
+        ForceFollowingSelection(container);
+    }
+    ReloadHomeTimelineTabs(container);
+}
+
+
 // MARK: - Hide custom timelines
 
 static __weak NSObject* PinnedTimelinesRepository;
@@ -67,69 +124,122 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 // handing it an empty array hides the tabs without touching persisted state.
 %hook _TtC32TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
 
-// X 12.3+ exposes Home through the unified segmented controller. Index 0 is
-// For You and index 1 is Following. When enabled, expose every tab except index
-// 0 by shifting visible indices by one. Following and pinned timelines remain.
-- (NSInteger)numberOfTabsV1In:(id)controller {
+// X 12.31.1 uses LegacySegmentedViewControllerDataSource selectors. Index 0 is
+// For You and index 1 is Following. Hide index 0 and remap every visible index
+// to the next source index so Following and pinned/custom timelines remain.
+- (NSInteger)numberOfTabsIn:(id)controller {
     NSInteger count = %orig;
-    if (![BHTSettings boolForKey:@"hide_for_you_tab"]) {
+    if (!HideForYouEnabled()) {
         return count;
     }
-    return count > 0 ? count - 1 : 0;
+    return count > 1 ? count - 1 : count;
+}
+
+- (id)segmentedViewController:(id)controller descriptorAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (UIViewController*)segmentedViewController:(id)controller
+                   pageViewControllerAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (BOOL)segmentedViewController:(id)controller
+    shouldSelectViewControllerAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (BOOL)segmentedViewController:(id)controller isPrewarmableTabAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (BOOL)segmentedViewController:(id)controller isUnreadIndicatorTabAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (id)segmentedViewController:(id)controller menuForTabAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (id)segmentedViewController:(id)controller tabGroupAtIndex:(NSInteger)index {
+    return %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (void)segmentedViewController:(id)controller didTapTabAtIndex:(NSInteger)index {
+    %orig(controller, HomeSourceTabIndex(index));
+}
+
+- (void)segmentedViewController:(id)controller didLongPressAtIndex:(NSInteger)index {
+    %orig(controller, HomeSourceTabIndex(index));
+}
+
+// Keep the old X 12.3 unified-segmented selectors for compatibility with older
+// host versions. They are not used by X 12.31.1.
+- (NSInteger)numberOfTabsV1In:(id)controller {
+    NSInteger count = %orig;
+    if (!HideForYouEnabled()) {
+        return count;
+    }
+    return count > 1 ? count - 1 : count;
 }
 
 - (NSInteger)numberOfTabsV2In:(id)controller {
     NSInteger count = %orig;
-    if (![BHTSettings boolForKey:@"hide_for_you_tab"]) {
+    if (!HideForYouEnabled()) {
         return count;
     }
-    return count > 0 ? count - 1 : 0;
+    return count > 1 ? count - 1 : count;
 }
 
 - (UIViewController*)unifiedSegmentedController:(id)controller
                        v1ViewControllerAtIndex:(NSInteger)index {
-    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
-    return %orig(controller, sourceIndex);
+    return %orig(controller, HomeSourceTabIndex(index));
 }
 
 - (NSString*)unifiedSegmentedController:(id)controller
                          v1TitleAtIndex:(NSInteger)index {
-    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
-    return %orig(controller, sourceIndex);
+    return %orig(controller, HomeSourceTabIndex(index));
 }
 
 - (NSString*)unifiedSegmentedController:(id)controller
             v1AccessibilityLabelAtIndex:(NSInteger)index {
-    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
-    return %orig(controller, sourceIndex);
+    return %orig(controller, HomeSourceTabIndex(index));
 }
 
 - (UIViewController*)unifiedSegmentedController:(id)controller
                        v2ViewControllerAtIndex:(NSInteger)index {
-    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
-    return %orig(controller, sourceIndex);
+    return %orig(controller, HomeSourceTabIndex(index));
 }
 
 - (id)unifiedSegmentedController:(id)controller
              v2DescriptorAtIndex:(NSInteger)index {
-    NSInteger sourceIndex = [BHTSettings boolForKey:@"hide_for_you_tab"] ? index + 1 : index;
-    return %orig(controller, sourceIndex);
+    return %orig(controller, HomeSourceTabIndex(index));
 }
 
 // If Home explicitly requests the algorithmic variant while hiding it, redirect
-// only that request to Following. Other variants remain unchanged.
+// only that request to Following. Other variants, including custom timelines,
+// remain available.
 - (void)selectTimelineVariant:(NSInteger)variant shouldRefresh:(BOOL)shouldRefresh {
-    if ([BHTSettings boolForKey:@"hide_for_you_tab"] && variant == 0) {
+    if (HideForYouEnabled() && variant == 0) {
         variant = 1;
     }
     %orig(variant, shouldRefresh);
 }
 
 - (void)selectFilteredTimelineVariant:(NSInteger)variant shouldRefresh:(BOOL)shouldRefresh {
-    if ([BHTSettings boolForKey:@"hide_for_you_tab"] && variant == 0) {
+    if (HideForYouEnabled() && variant == 0) {
         variant = 1;
     }
     %orig(variant, shouldRefresh);
+}
+
+- (void)clearLastSelectedTabIdentifier {
+    if (HideForYouEnabled()) {
+        [[NSUserDefaults standardUserDefaults] setObject:FollowingTimelineTabIdentifier
+                                                  forKey:HomeTimelineTabSelectionKey];
+        return;
+    }
+    %orig;
 }
 
 - (void)pinnedTimelinesRepository:(id)repository
@@ -152,6 +262,10 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 
 - (void)viewDidAppear:(BOOL)animated {
     %orig;
+    ActiveHomeTimelineContainer = self;
+    if (HideForYouEnabled()) {
+        ForceFollowingSelection(self);
+    }
     SyncHomeAddTabButton(self, [BHTSettings boolForKey:@"hide_custom_timelines"]);
 }
 
