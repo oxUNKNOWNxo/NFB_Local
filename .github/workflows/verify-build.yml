@@ -1,0 +1,80 @@
+name: Verify NFB Local build
+
+on:
+  push:
+    paths:
+      - '.nfb_build'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout NFB Local
+        uses: actions/checkout@v6
+        with:
+          path: main
+          submodules: recursive
+
+      - name: Install dependencies
+        run: brew install make dpkg ldid
+
+      - name: Add GNU Make to PATH
+        run: echo "$(brew --prefix make)/libexec/gnubin" >> "$GITHUB_PATH"
+
+      - name: Download Theos
+        uses: actions/checkout@v6
+        with:
+          repository: theos/theos
+          ref: master
+          path: theos
+          submodules: recursive
+
+      - name: Cache iOS SDK
+        id: sdk
+        uses: actions/cache@v6
+        with:
+          path: theos/sdks/
+          key: iOS-16.5-SDK
+
+      - name: Download iOS SDK
+        if: steps.sdk.outputs.cache-hit != 'true'
+        run: |
+          git clone -n --depth=1 --filter=tree:0 https://github.com/theos/sdks/ sdks
+          cd sdks
+          git sparse-checkout set --no-cone iPhoneOS16.5.sdk
+          git checkout
+          mv ./*.sdk "$THEOS/sdks"
+        env:
+          THEOS: ${{ github.workspace }}/theos
+
+      - name: Compute ffmpeg cache key
+        id: ffmpeg-key
+        run: echo "key=ffmpeg-stack-$(git -C main rev-parse --short HEAD:deps/ffmpeg-kit-next/upstream)-${{ hashFiles('main/deps/ffmpeg-kit-next/build-ffmpeg.sh') }}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache ffmpeg stack
+        uses: actions/cache@v6
+        with:
+          path: |
+            ffmpeg-build
+            main/deps/ffmpeg-kit-next/build
+          key: ${{ steps.ffmpeg-key.outputs.key }}
+
+      - name: Build rootless package
+        run: |
+          cd main
+          sed -i '' 's/^TARGET.*$/TARGET := iphone:clang:16.5:15.0/' Makefile
+          chmod +x build.sh deps/ffmpeg-kit-next/build-ffmpeg.sh
+          ./build.sh --rootless
+        env:
+          THEOS: ${{ github.workspace }}/theos
+          BUILD_DIR: ${{ github.workspace }}/ffmpeg-build
+
+      - name: Show packages
+        run: ls -lah main/packages
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v7
+        with:
+          name: NFB_Local-rootless
+          path: main/packages/*.deb
+          if-no-files-found: error
