@@ -84,6 +84,12 @@
 "PADLOCK_TITLE" = "Xをロック";
 "PADLOCK_DETAIL" = "Xを開く際にFace IDまたはパスコードによる認証を必要とします。";
 
+"BLOCK_LINK_TRACKING_TITLE" = "リンクの追跡をブロック";
+"BLOCK_LINK_TRACKING_DETAIL" = "t.coを経由せずにリンク先を直接開き、バックグラウンドでのt.coへの通信や広告クリックIDの付与を防ぎます。Twitterの危険なリンクに関する警告は表示されなくなります。";
+
+"STRIP_TRACKING_PARAMS_TITLE" = "追跡用パラメータを削除";
+"STRIP_TRACKING_PARAMS_DETAIL" = "開くリンクからutm_などの追跡用パラメータを取り除きます。";
+
 "NEW_INAPP_WEBVIEW_TITLE" = "アプリ内ブラウザを改善（ベータ版）";
 "NEW_INAPP_WEBVIEW_DETAIL" = "リンクを開く際に、Xの新しいアプリ内ブラウザを使用します。";
 
@@ -150,7 +156,10 @@
 "SQUARE_AVATARS_DETAIL" = "旧Twitterのように、ブランドアカウントのような正方形のプロフィール画像を全員に適用します。";
 
 "REPLY_SORTING_TITLE" = "リプライの並べ替えを無効にする";
-"REPLY_SORTING_DETAIL" = "ポストのリプライにある並べ替え機能を無効にします。";
+"REPLY_SORTING_DETAIL" = "ツイートの返信欄にある並べ替えボタンを非表示にします。";
+
+"DEFAULT_REPLY_SORTING_TITLE" = "リプライの既定の並べ替え";
+"DEFAULT_REPLY_SORTING_DETAIL" = "すべてのツイートで使用するリプライの既定の並べ替え順を選択します。";
 
 "RESTORE_REPLY_CONTEXT_TITLE" = "返信コンテキストを復元";
 "RESTORE_REPLY_CONTEXT_DETAIL" = "ポストの下に、そのポストへの返信先を表示します。";
@@ -260,6 +269,12 @@
 
 "HIDE_FOR_YOU_TAB_TITLE" = "「おすすめ」タブを非表示";
 "HIDE_FOR_YOU_TAB_DETAIL" = "ホームから「おすすめ」タブだけを削除し、「フォロー中」と固定したタイムラインは残します。設定変更後はXを再起動してください。";
+
+"HIDE_QUOTE_TWEETS_TITLE" = "引用ツイートを非表示";
+"HIDE_QUOTE_TWEETS_DETAIL" = "タイムライン内の引用ツイートを非表示にします。";
+
+"HIDE_RETWEETS_TITLE" = "リツイートを非表示";
+"HIDE_RETWEETS_DETAIL" = "タイムライン内のリツイートを非表示にします。";
 
 "RESTORE_REFRESH_SOUNDS_TITLE" = "引っ張って更新のサウンド";
 
