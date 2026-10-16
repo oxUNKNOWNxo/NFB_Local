@@ -1,9 +1,34 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-10-15 (JST)
+最終更新: 2026-10-16 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+## 0. 最新状態（2026-10-16）
+
+- 本家 `NeoFreeBird/app` `v7` 取り込み先端: **`e137331dad77064c9fe819bc5cce233756c3ea3c`**（前回 `a8cb17f` から9コミット）。
+- 本家最新release: **v7.1.1**。Twitter版ベースアプリ: **12.31.1**。
+- ローカルバージョン: **7.1.7**。作業ブランチ: `automation/upstream-v7-20261016`。
+- ビルド対象コミット: `6a042eae6fbb7708b86c230c503f5a84d741646b`。
+- `Package` run **#8**: success。Run ID: `38830677440`。
+- Artifact: `local_7.1.7_12.31.1.tipa`、ID: `12016069905`、archive size: `257064122` bytes。
+- GitHub artifact archive SHA-256: `ffaec94359566c801ea24f9696d12fd18751af0fa3bf79e152172b0fb5ed3ab4`。
+- Artifact URL: `https://github.com/oxUNKNOWNxo/NFB_Local/actions/runs/38830677440/artifacts/12016069905`。
+
+### 更新内容
+
+- 本家の新しいツイート投稿元ラベル、複数アカウントクラッシュ修正、引用/リツイート非表示の自身の投稿除外、ポスト操作回数の翻訳、設定画面レイアウト更新、WebView返信説明変更などを取り込んだ。
+- `hide_for_you_tab` と `restore_home_tab_selection` を含むローカル `HomeBars.x` は維持し、本家のホーム長押し設定ジェスチャーを追加。新しい `HookHelpers.h` 宣言を統合。
+- 英語/日本語設定キー: **307 / 307**（ローカル独自2キー含む）。新規4キーを翻訳し、WebView返信説明とリプライ並べ替えボタン名を更新。
+- `restore_tweet_labels` 設定を追加。
+- Compile / Assemble / Upload 成功。CydiaSubstrate dependencyは `@rpath/CydiaSubstrate.framework/CydiaSubstrate` に補正済み。Mach-O install name維持、`ldid -S`、ZIP integrity check成功。
+- 検証用push triggerは削除済み。通常の `Package` は `workflow_dispatch` のみ。
+- 従来からのThemeColor型警告とobsolete linker option警告は残るがビルド成功。
+
+**実機での起動、ホームタブ、固定リスト、複数アカウント、投稿元ラベル、設定画面の動作は未確認。ビルド成功と実機動作確認を混同しない。**
 
 ---
 
@@ -28,7 +53,7 @@
 
 ---
 
-## 2. 現在の基準バージョン
+## 2. 前回の基準バージョン（7.1.6の記録）
 
 2026-10-15時点:
 
