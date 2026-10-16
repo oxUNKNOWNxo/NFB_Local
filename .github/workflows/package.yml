@@ -1,9 +1,6 @@
 name: Package
 
 on:
-  push:
-    branches:
-      - automation/upstream-v7-20261016
   workflow_dispatch:
     inputs:
       sdk_version:
