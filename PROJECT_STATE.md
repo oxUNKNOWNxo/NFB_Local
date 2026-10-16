@@ -341,6 +341,20 @@ permissions:
 
 組織/リポジトリ側ポリシーで `GITHUB_TOKEN` のwriteが禁止されている場合、Packageは成功してもPromoteだけ失敗する。その場合はGitHubのActions権限設定を確認する。安全チェック回避のためChatGPT側から直接mainへ反映しない。
 
+### 実走確認
+
+2026-10-16に `automation/upstream-v7-ready-smoketest-20261016` を現在のmainから作成し、検証用コミット `82c5133f990854baa76215769ed9f6147b1f5ec7` をpushして実走確認した。
+
+結果:
+
+- ready branchへのpushで `Package` が自動起動。
+- Package成功後に `Promote verified update` が起動。
+- ready SHAがmainへfast-forwardされたことを、検証ファイルがmainへ現れたことで確認。
+- `contents: write` はこのリポジトリで実際に機能している。
+- 検証ファイルは確認後mainから削除済み。
+
+したがって、2026-10-16時点で **ready branch → Package → Promote verified update → main fast-forward の経路は実走確認済み**。
+
 ---
 
 ## 10. 本家更新時の自動追従手順
