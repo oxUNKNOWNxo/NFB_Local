@@ -1,0 +1,80 @@
+name: Promote verified update
+
+on:
+  workflow_run:
+    workflows: ["Package"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    name: Promote verified update
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      startsWith(github.event.workflow_run.head_branch, 'automation/upstream-v7-ready-')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify and fast-forward main
+        env:
+          READY_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          READY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+
+          case "$READY_BRANCH" in
+            automation/upstream-v7-ready-*) ;;
+            *)
+              echo "Unexpected branch: $READY_BRANCH" >&2
+              exit 1
+              ;;
+          esac
+
+          git fetch --no-tags origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/heads/${READY_BRANCH}:refs/remotes/origin/${READY_BRANCH}"
+
+          ACTUAL_READY_SHA=$(git rev-parse "refs/remotes/origin/${READY_BRANCH}")
+          test "$ACTUAL_READY_SHA" = "$READY_SHA"
+
+          # Promote only a strict descendant of the current main. If main moved
+          # independently while validation was running, promotion stops here.
+          git merge-base --is-ancestor refs/remotes/origin/main "$READY_SHA"
+
+          # The validation branch must not rewrite the CI trust boundary itself.
+          # Workflow changes require a separate reviewed main commit.
+          CHANGED_WORKFLOWS=$(git diff --name-only refs/remotes/origin/main "$READY_SHA" -- \
+            .github/workflows/package.yml \
+            .github/workflows/promote-verified-update.yml)
+          if [ -n "$CHANGED_WORKFLOWS" ]; then
+            echo "Refusing to promote a branch that changes protected workflow files:" >&2
+            printf '%s\n' "$CHANGED_WORKFLOWS" >&2
+            exit 1
+          fi
+
+          echo "Promoting $READY_BRANCH ($READY_SHA) to main by fast-forward only."
+          git push origin "$READY_SHA:refs/heads/main"
+
+      - name: Summary
+        if: success()
+        env:
+          READY_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          READY_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          {
+            echo "### Verified update promoted"
+            echo
+            echo "- Branch: \`$READY_BRANCH\`"
+            echo "- Commit: \`$READY_SHA\`"
+            echo "- Method: fast-forward only"
+          } >> "$GITHUB_STEP_SUMMARY"
