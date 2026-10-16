@@ -36,6 +36,7 @@ void applySquareAvatarsSetting(void);
 NSString* formatNumberWithSuffix(long long number);
 void applySelectedThemeColor(void);
 void BHTApplyDimToVideoControls(UIView* controlsView);
+void attachNeoFreeBirdSettingsGesture(UIViewController* home);
 void applyHideCustomTimelinesSetting(void);
 void applyRestoreHomeTabSelectionSetting(void);
 void saveHomeTimelineSelectionBeforeResignActive(void);
@@ -48,3 +49,4 @@ void webLoginDidCaptureCookies(NSString* userID, NSString* username,
                                NSDictionary<NSString*, NSString*>* cookiePairs);
 BOOL isCookieLoginUserID(NSString* userID);
 NSDictionary* currentWebCredentials(void);
+extern NSMutableDictionary* tweetSources;

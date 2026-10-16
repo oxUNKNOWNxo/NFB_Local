@@ -109,6 +109,9 @@
 "SHOW_QUOTE_NUMBERS_DETAIL" = "ポストが受けた引用とリポストの数を表示します。";
 
 "SHOW_UNROUNDED_QUOTE_NUMBERS_TITLE" = "正確な引用数を表示";
+"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@  リツイート: %@";
+"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リツイート: %lld";
+
 "SHOW_UNROUNDED_QUOTE_NUMBERS_DETAIL" = "ポストが受けた引用とリポストの正確な数を表示します。表示が崩れる場合があります。";
 
 "USE_TENOR_GIFS_TITLE" = "TenorのGIFを使用する";
@@ -119,6 +122,9 @@
 
 "SHOW_POLL_RESULTS_TITLE" = "投票前に結果を表示";
 "SHOW_POLL_RESULTS_DETAIL" = "投票する前に各選択肢の投票結果を表示し、他のユーザーの投票状況を確認できるようにします。";
+
+"RESTORE_TWEET_LABELS_TITLE" = "ツイートの投稿元を表示";
+"RESTORE_TWEET_LABELS_DETAIL" = "ツイートの投稿に使用されたクライアントを表示します。";
 
 "SHOW_ACCOUNT_LOCATION_TITLE" = "アカウントの登録地域を表示";
 "SHOW_ACCOUNT_LOCATION_DETAIL" = "ポストの下部に、投稿したアカウントの登録地域を表示します。";
@@ -155,7 +161,7 @@
 "SQUARE_AVATARS_TITLE" = "正方形のプロフィール画像";
 "SQUARE_AVATARS_DETAIL" = "旧Twitterのように、ブランドアカウントのような正方形のプロフィール画像を全員に適用します。";
 
-"REPLY_SORTING_TITLE" = "リプライの並べ替えを無効にする";
+"REPLY_SORTING_TITLE" = "リプライの並べ替えボタンを非表示";
 "REPLY_SORTING_DETAIL" = "ツイートの返信欄にある並べ替えボタンを非表示にします。";
 
 "DEFAULT_REPLY_SORTING_TITLE" = "リプライの既定の並べ替え";
@@ -298,7 +304,7 @@
 
 /*Labs*/
 "REPLY_IN_WEBVIEW_TITLE" = "ウェブビューで返信";
-"REPLY_IN_WEBVIEW_DETAIL" = "アテステーションを回避するため、返信ボックスをウェブビューで開きます。";
+"REPLY_IN_WEBVIEW_DETAIL" = "アプリ内で返信を送信できない場合の代替手段です。返信をアプリ内ではなくx.comから送信します。";
 
 /*Debug*/
 "FLEX_TWITTER_TITLE" = "デバッグモード";

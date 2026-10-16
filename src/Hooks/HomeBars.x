@@ -414,6 +414,7 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
     }
 
     SyncHomeAddTabButton(self, [BHTSettings boolForKey:@"hide_custom_timelines"]);
+    attachNeoFreeBirdSettingsGesture((UIViewController*)self);
 }
 
 %end

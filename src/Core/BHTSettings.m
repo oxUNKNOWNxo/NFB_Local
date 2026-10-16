@@ -340,6 +340,11 @@ static NSDictionary<NSString*, NSDictionary*>* BHTSettingsPages(void) {
                         @"type": @"toggle"
                     },
                     @{
+                        @"key": @"restore_tweet_labels",
+                        @"default": @NO,
+                        @"type": @"toggle"
+                    },
+                    @{
                         @"key": @"upload_full_hd_videos",
                         @"default": @NO,
                         @"type": @"toggle"
