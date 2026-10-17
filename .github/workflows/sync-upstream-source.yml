@@ -1,0 +1,163 @@
+name: Sync upstream source
+
+on:
+  push:
+    branches:
+      - 'automation/upstream-v7-work-*'
+    paths:
+      - '.upstream-sync-request'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Three-way sync upstream
+    if: ${{ !contains(github.event.head_commit.message || '', '[upstream-sync]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout work branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Read sync request
+        id: request
+        run: |
+          set -euo pipefail
+          test -f .upstream-sync-request
+          BASE=$(awk -F= '$1=="BASE" {print $2}' .upstream-sync-request)
+          TARGET=$(awk -F= '$1=="TARGET" {print $2}' .upstream-sync-request)
+          test -n "$BASE"
+          test -n "$TARGET"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch upstream commits
+        env:
+          BASE: ${{ steps.request.outputs.base }}
+          TARGET: ${{ steps.request.outputs.target }}
+        run: |
+          set -euo pipefail
+          git remote add nfb-upstream https://github.com/NeoFreeBird/app.git
+          git fetch --no-tags nfb-upstream "$BASE" "$TARGET"
+          git cat-file -e "$BASE^{commit}"
+          git cat-file -e "$TARGET^{commit}"
+
+      - name: Apply upstream with three-way file merge
+        id: merge
+        env:
+          BASE: ${{ steps.request.outputs.base }}
+          TARGET: ${{ steps.request.outputs.target }}
+        run: |
+          set -euo pipefail
+          : > UPSTREAM_MERGE_CONFLICTS.txt
+          conflicts=0
+
+          git diff --name-status "$BASE" "$TARGET" > /tmp/upstream-files.txt
+          echo "Upstream changed files:"
+          cat /tmp/upstream-files.txt
+
+          while IFS=$'\t' read -r status path extra; do
+            [ -n "$status" ] || continue
+
+            case "$status" in
+              M*)
+                mkdir -p "$(dirname "$path")"
+                local_tmp=$(mktemp)
+                base_tmp=$(mktemp)
+                remote_tmp=$(mktemp)
+                merged_tmp=$(mktemp)
+                cp "$path" "$local_tmp"
+                git show "$BASE:$path" > "$base_tmp"
+                git show "$TARGET:$path" > "$remote_tmp"
+                set +e
+                git merge-file -p "$local_tmp" "$base_tmp" "$remote_tmp" > "$merged_tmp"
+                rc=$?
+                set -e
+                mv "$merged_tmp" "$path"
+                rm -f "$local_tmp" "$base_tmp" "$remote_tmp"
+                if [ "$rc" -ne 0 ]; then
+                  echo "$path" >> UPSTREAM_MERGE_CONFLICTS.txt
+                  conflicts=$((conflicts + 1))
+                fi
+                ;;
+              A*)
+                mkdir -p "$(dirname "$path")"
+                git show "$TARGET:$path" > "$path"
+                ;;
+              D*)
+                base_sha=$(git rev-parse "$BASE:$path")
+                if [ -f "$path" ] && [ "$(git hash-object "$path")" != "$base_sha" ]; then
+                  echo "$path (upstream deleted, local modified)" >> UPSTREAM_MERGE_CONFLICTS.txt
+                  conflicts=$((conflicts + 1))
+                else
+                  rm -f "$path"
+                fi
+                ;;
+              R*|C*)
+                old_path="$path"
+                new_path="$extra"
+                mkdir -p "$(dirname "$new_path")"
+                if [ -f "$old_path" ]; then
+                  cp "$old_path" "$new_path"
+                  rm -f "$old_path"
+                else
+                  git show "$TARGET:$new_path" > "$new_path"
+                fi
+                echo "$new_path (rename/copy requires review)" >> UPSTREAM_MERGE_CONFLICTS.txt
+                conflicts=$((conflicts + 1))
+                ;;
+              *)
+                echo "$path (unsupported status $status)" >> UPSTREAM_MERGE_CONFLICTS.txt
+                conflicts=$((conflicts + 1))
+                ;;
+            esac
+          done < /tmp/upstream-files.txt
+
+          rm -f .upstream-sync-request
+          echo "conflicts=$conflicts" >> "$GITHUB_OUTPUT"
+
+          if [ "$conflicts" -gt 0 ]; then
+            echo "Three-way merge produced $conflicts conflict(s):"
+            cat UPSTREAM_MERGE_CONFLICTS.txt
+            echo
+            echo "Conflict marker excerpts:"
+            while IFS= read -r conflict; do
+              path=${conflict%% (*}
+              if [ -f "$path" ]; then
+                echo "===== $path ====="
+                grep -n -B 12 -A 20 '^<<<<<<<' "$path" || true
+              fi
+            done < UPSTREAM_MERGE_CONFLICTS.txt
+          else
+            rm -f UPSTREAM_MERGE_CONFLICTS.txt
+          fi
+
+      - name: Commit work result
+        env:
+          TARGET: ${{ steps.request.outputs.target }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          if [ "$CONFLICTS" = "0" ]; then
+            git commit -m "[upstream-sync] apply NeoFreeBird ${TARGET}"
+          else
+            git commit -m "[upstream-sync] preserve ${CONFLICTS} merge conflicts for review"
+          fi
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Fail when manual merge is required
+        if: ${{ steps.merge.outputs.conflicts != '0' }}
+        run: |
+          echo "Upstream source was preserved on the work branch with conflict markers for manual review." >&2
+          exit 1
