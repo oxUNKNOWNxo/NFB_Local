@@ -1,0 +1,46 @@
+name: Validate work source
+
+on:
+  push:
+    branches:
+      - 'automation/upstream-v7-work-*'
+    paths:
+      - '.validate-work-source'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate localization and source state
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Reject conflict markers
+        run: |
+          set -euo pipefail
+          if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' src layout control; then
+            echo 'Conflict marker found.' >&2
+            exit 1
+          fi
+
+      - name: Validate Japanese localization
+        run: |
+          set -euo pipefail
+          python3 check_localization.py ja
+          python3 check_localization.py ja --values
+
+      - name: Validate local Home settings wiring
+        run: |
+          set -euo pipefail
+          grep -Fq '@"key": @"hide_for_you_tab"' src/Core/BHTSettings.m
+          grep -Fq '@"restore_home_tab_selection"' src/Settings/Pages/TimelinesSettingsViewController.m
+          grep -Fq 'numberOfTabsIn:' src/Hooks/HomeBars.x
+          grep -Fq 'reloadDataWithSelectingIndex:' src/Hooks/HomeBars.x
+          grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars.x
+          grep -Fq 'saveHomeTimelineSelectionBeforeResignActive' src/Hooks/AppLifecycle.x
+          grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
+          grep -Fq 'Version: 7.2.1' control
