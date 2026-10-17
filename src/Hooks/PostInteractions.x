@@ -11,13 +11,17 @@ static void BHTSetPostInteractionCounts(UIViewController* controller, TFNTwitter
         return;
     }
     if (![BHTSettings boolForKey:@"show_unrounded_quote_numbers"]) {
-        controller.navigationItem.title = [NSString stringWithFormat:@"Quotes: %@  Retweets: %@",
-                                            formatNumberWithSuffix(status.quoteCount),
-                                            formatNumberWithSuffix(status.retweetCount)];
+        NSString* titleFormat =
+            [[BHTBundle sharedBundle] localizedStringForKey:@"POST_INTERACTIONS_COUNTS_TITLE"];
+        controller.navigationItem.title = [NSString stringWithFormat:titleFormat,
+                                                                     formatNumberWithSuffix(status.quoteCount),
+                                                                     formatNumberWithSuffix(status.retweetCount)];
     } else {
-        controller.navigationItem.title = [NSString stringWithFormat:@"Quotes: %lld  Retweets: %lld",
-                                            status.quoteCount,
-                                            status.retweetCount];
+        NSString* titleFormat = [[BHTBundle sharedBundle]
+            localizedStringForKey:@"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE"];
+        controller.navigationItem.title = [NSString stringWithFormat:titleFormat,
+                                                                     status.quoteCount,
+                                                                     status.retweetCount];
     }
 }
 
@@ -27,9 +31,9 @@ static char BHTPostInteractionStatusIDKey;
 %hook T1PostInteractionsViewController
 
 + (id)viewControllerWithAccount:(TFNTwitterAccount*)account
-                        statusID:(long long)statusID
-                      statusUserID:(long long)statusUserID
-                       initialTab:(long long)initialTab {
+                       statusID:(long long)statusID
+                   statusUserID:(long long)statusUserID
+                     initialTab:(long long)initialTab {
     T1PostInteractionsViewController* controller =
         %orig(account, statusID, statusUserID, initialTab);
     if (controller != nil) {

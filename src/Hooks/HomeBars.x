@@ -3,10 +3,10 @@
 //  NeoFreeBird
 //
 
-
 #import <string.h>
 #import "HookHelpers.h"
 
+<<<<<<< /tmp/tmp.gawQtYlTxk
 
 // MARK: - Home timeline tabs
 
@@ -181,6 +181,8 @@ void applyRestoreHomeTabSelectionSetting(void) {
 }
 
 
+=======
+>>>>>>> /tmp/tmp.Vr0PGETPj2
 // MARK: - Hide custom timelines
 
 static __weak NSObject* PinnedTimelinesRepository;
@@ -414,6 +416,7 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
     }
 
     SyncHomeAddTabButton(self, [BHTSettings boolForKey:@"hide_custom_timelines"]);
+    attachNeoFreeBirdSettingsGesture((UIViewController*)self);
 }
 
 %end

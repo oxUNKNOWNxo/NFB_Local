@@ -1,8 +1,12 @@
-Package: com.bandarhl.bhtwitter
+Package: com.nfb.tweak
 Name: NeoFreeBird
+<<<<<<< /tmp/tmp.SdXB8d3bmC
 Version: 7.1.6
+=======
+Version: 7.2.0
+>>>>>>> /tmp/tmp.NHHRLWc03Z
 Architecture: iphoneos-arm
-Description: Awesome tweak for Twitter
+Description: A tweak which brings back the old Twitter experience, with the features of X.
 Maintainer: NeoFreeBird
 Author: NeoFreeBird
 Section: Tweaks

@@ -5,6 +5,10 @@
 
 #import "HookHelpers.h"
 
+@interface T1ConversationFooterItem : NSObject
+@property (nonatomic, retain) NSNumber* viewCount;
+@end
+
 // MARK: - Hide Blue verified checkmark
 
 // The author-row badge (SimpleBadgeable.init(statusViewModel:)) builds from the
@@ -167,23 +171,68 @@
 
 %end
 
-// MARK: - Hide Follow button on Tweets
+// MARK: - Hide Follow and Message buttons on Tweets
 
 // The conversation focal tweet and the immersive player both render their
-// author row through TTAStatusAuthorView, so forcing the flag here covers every
-// surface.
+// author row through TTAStatusAuthorView, so applying the settings here covers
+// both surfaces.
 
 %hook TTAStatusAuthorView
 
 - (void)setFollowControlHidden:(BOOL)hidden {
     %orig([BHTSettings boolForKey:@"hide_follow_button"] ? YES : hidden);
 }
-- (void)didMoveToWindow {
-    if ([BHTSettings boolForKey:@"hide_follow_button"]) {
-        self.messageButton.hidden = YES;
-        self.messageButton.userInteractionEnabled = NO;
-        self.messageButton.alpha = 0.0;
+
+// Both content updates and layout use this setter, so later frame-based
+// visibility updates cannot undo the preference. Native visibility is retained
+// when the preference is off, including for cached and reused author rows.
+- (void)_t1_screenshots_modified_setHidden:(BOOL)hidden view:(UIView*)view {
+    if (view && view == self.messageButton &&
+        [BHTSettings boolForKey:@"hide_message_button"]) {
+        hidden = YES;
     }
+    %orig(hidden, view);
+}
+
+%end
+
+// Hiding views also requires hooking the footer, and X is being weird and making it
+// more complicated than it should be.
+%hook T1ConversationFooterTextView
+
+- (void)updateFooterTextView {
+    if (![BHTSettings boolForKey:@"hide_view_count"]) {
+        %orig;
+        return;
+    }
+
+    T1ConversationFooterItem* footerItem = self.footerItem;
+    NSNumber* viewCount = footerItem.viewCount;
+    footerItem.viewCount = nil;
+    @try {
+        %orig;
+    } @finally {
+        footerItem.viewCount = viewCount;
+    }
+}
+
++ (CGSize)sizeForViewModel:(id)model
+                          footerItem:(T1ConversationFooterItem*)footerItem
+                        maximumWidth:(CGFloat)width
+    grokEditImageButtonConfiguration:(id)configuration {
+    if (![BHTSettings boolForKey:@"hide_view_count"] || !footerItem) {
+        return %orig;
+    }
+
+    NSNumber* viewCount = footerItem.viewCount;
+    footerItem.viewCount = nil;
+    CGSize size;
+    @try {
+        size = %orig;
+    } @finally {
+        footerItem.viewCount = viewCount;
+    }
+    return size;
 }
 
 %end
@@ -224,8 +273,8 @@
 %end
 
 %hook T1StandardStatusAskGrokButtonView
-    
--(void)didMoveToWindow {
+
+- (void)didMoveToWindow {
     %orig;
     if ([BHTSettings boolForKey:@"hide_grok_create"]) {
         self.hidden = YES;

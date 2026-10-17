@@ -36,6 +36,14 @@ void applySquareAvatarsSetting(void);
 NSString* formatNumberWithSuffix(long long number);
 void applySelectedThemeColor(void);
 void BHTApplyDimToVideoControls(UIView* controlsView);
+<<<<<<< /tmp/tmp.Eb7BwSMKsn
+=======
+
+// Long press on the home navigation bar opens NeoFreeBird settings (Settings.x)
+void attachNeoFreeBirdSettingsGesture(UIViewController* home);
+
+// Live pinned-tabs refresh when the hide setting is toggled (Timeline.x)
+>>>>>>> /tmp/tmp.RBOSUWWCJ8
 void applyHideCustomTimelinesSetting(void);
 void applyRestoreHomeTabSelectionSetting(void);
 void saveHomeTimelineSelectionBeforeResignActive(void);
@@ -48,3 +56,6 @@ void webLoginDidCaptureCookies(NSString* userID, NSString* username,
                                NSDictionary<NSString*, NSString*>* cookiePairs);
 BOOL isCookieLoginUserID(NSString* userID);
 NSDictionary* currentWebCredentials(void);
+
+// Restored tweet source labels, keyed by tweet ID (SourceLabels.x)
+extern NSMutableDictionary* tweetSources;
