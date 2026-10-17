@@ -1,0 +1,114 @@
+name: Resolve reviewed upstream conflicts
+
+on:
+  push:
+    branches:
+      - 'automation/upstream-v7-work-*'
+    paths:
+      - '.upstream-conflict-resolution'
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    name: Apply reviewed conflict resolutions
+    if: ${{ !contains(github.event.head_commit.message || '', '[upstream-resolve]') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout work branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve reviewed files
+        run: |
+          set -euo pipefail
+          test -f .upstream-conflict-resolution
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          request = Path('.upstream-conflict-resolution').read_text(encoding='utf-8').splitlines()
+          version = None
+          strategies = {}
+          for raw in request:
+              line = raw.strip()
+              if not line or line.startswith('#'):
+                  continue
+              if line.startswith('VERSION='):
+                  version = line.split('=', 1)[1]
+                  continue
+              path, strategy = line.rsplit('=', 1)
+              if strategy not in {'ours', 'theirs'}:
+                  raise SystemExit(f'Unsupported strategy: {strategy}')
+              strategies[path] = strategy
+
+          def resolve_markers(text: str, strategy: str) -> str:
+              lines = text.splitlines(keepends=True)
+              out = []
+              i = 0
+              while i < len(lines):
+                  if not lines[i].startswith('<<<<<<<'):
+                      out.append(lines[i])
+                      i += 1
+                      continue
+                  i += 1
+                  ours = []
+                  while i < len(lines) and not lines[i].startswith('======='):
+                      ours.append(lines[i])
+                      i += 1
+                  if i >= len(lines):
+                      raise RuntimeError('unterminated conflict: missing =======')
+                  i += 1
+                  theirs = []
+                  while i < len(lines) and not lines[i].startswith('>>>>>>>'):
+                      theirs.append(lines[i])
+                      i += 1
+                  if i >= len(lines):
+                      raise RuntimeError('unterminated conflict: missing >>>>>>>')
+                  i += 1
+                  out.extend(ours if strategy == 'ours' else theirs)
+              return ''.join(out)
+
+          for path, strategy in strategies.items():
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              p.write_text(resolve_markers(text, strategy), encoding='utf-8')
+
+          if version:
+              p = Path('control')
+              lines = p.read_text(encoding='utf-8').splitlines()
+              replaced = False
+              out = []
+              for line in lines:
+                  if line.startswith('Version:'):
+                      out.append(f'Version: {version}')
+                      replaced = True
+                  else:
+                      out.append(line)
+              if not replaced:
+                  raise RuntimeError('control Version field not found')
+              p.write_text('\n'.join(out) + '\n', encoding='utf-8')
+          PY
+
+          rm -f .upstream-conflict-resolution UPSTREAM_MERGE_CONFLICTS.txt
+
+          if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' \
+              control \
+              'layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings' \
+              src/Hooks/HomeBars.x \
+              src/Hooks/HookHelpers.h; then
+            echo 'Unresolved conflict marker remains.' >&2
+            exit 1
+          fi
+
+      - name: Commit resolved work tree
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m '[upstream-resolve] resolve reviewed NeoFreeBird update conflicts'
+          git push origin HEAD:${GITHUB_REF_NAME}
