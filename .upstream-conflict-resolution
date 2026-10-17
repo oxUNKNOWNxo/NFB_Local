@@ -1,5 +1,0 @@
-VERSION=7.2.1
-control=theirs
-layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings=ours
-src/Hooks/HomeBars.x=ours
-src/Hooks/HookHelpers.h=theirs

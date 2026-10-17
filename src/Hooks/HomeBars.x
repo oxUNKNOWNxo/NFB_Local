@@ -6,7 +6,6 @@
 #import <string.h>
 #import "HookHelpers.h"
 
-<<<<<<< /tmp/tmp.gawQtYlTxk
 
 // MARK: - Home timeline tabs
 
@@ -181,8 +180,6 @@ void applyRestoreHomeTabSelectionSetting(void) {
 }
 
 
-=======
->>>>>>> /tmp/tmp.Vr0PGETPj2
 // MARK: - Hide custom timelines
 
 static __weak NSObject* PinnedTimelinesRepository;

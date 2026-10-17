@@ -36,14 +36,11 @@ void applySquareAvatarsSetting(void);
 NSString* formatNumberWithSuffix(long long number);
 void applySelectedThemeColor(void);
 void BHTApplyDimToVideoControls(UIView* controlsView);
-<<<<<<< /tmp/tmp.Eb7BwSMKsn
-=======
 
 // Long press on the home navigation bar opens NeoFreeBird settings (Settings.x)
 void attachNeoFreeBirdSettingsGesture(UIViewController* home);
 
 // Live pinned-tabs refresh when the hide setting is toggled (Timeline.x)
->>>>>>> /tmp/tmp.RBOSUWWCJ8
 void applyHideCustomTimelinesSetting(void);
 void applyRestoreHomeTabSelectionSetting(void);
 void saveHomeTimelineSelectionBeforeResignActive(void);

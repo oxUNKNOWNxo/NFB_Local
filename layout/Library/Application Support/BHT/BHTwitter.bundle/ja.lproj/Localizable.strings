@@ -155,19 +155,11 @@
 "SQUARE_AVATARS_TITLE" = "正方形のプロフィール画像";
 "SQUARE_AVATARS_DETAIL" = "旧Twitterのように、ブランドアカウントのような正方形のプロフィール画像を全員に適用します。";
 
-<<<<<<< /tmp/tmp.AXqaqZ16wS
 "REPLY_SORTING_TITLE" = "リプライの並べ替えを無効にする";
 "REPLY_SORTING_DETAIL" = "ツイートの返信欄にある並べ替えボタンを非表示にします。";
 
 "DEFAULT_REPLY_SORTING_TITLE" = "リプライの既定の並べ替え";
 "DEFAULT_REPLY_SORTING_DETAIL" = "すべてのツイートで使用するリプライの既定の並べ替え順を選択します。";
-=======
-"DEFAULT_REPLY_SORTING_TITLE" = "デフォルトの返信の並び替え";
-"DEFAULT_REPLY_SORTING_DETAIL" = "すべてのポストにおける返信のデフォルトの並び替え順を選択します。";
-
-"REPLY_SORTING_TITLE" = "返信の並べ替えを無効にする";
-"REPLY_SORTING_DETAIL" = "ポストの会話で返信の並び替えボタンを非表示にします。";
->>>>>>> /tmp/tmp.xCCLKzBSks
 
 "RESTORE_REPLY_CONTEXT_TITLE" = "返信コンテキストを復元";
 "RESTORE_REPLY_CONTEXT_DETAIL" = "ポストの下に、そのポストへの返信先を表示します。";
