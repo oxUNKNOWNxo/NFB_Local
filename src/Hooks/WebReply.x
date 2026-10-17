@@ -42,6 +42,18 @@ static TFNTwitterStatus* statusFromObject(id object) {
 static const void* KeepReplyInWebViewKey = &KeepReplyInWebViewKey;
 static const void* ReplyWebViewDismissingKey = &ReplyWebViewDismissingKey;
 
+
+// X 12.33 can reject authenticated x.com intent replies with error 226
+// (automated-request protection). Do not attempt to bypass that protection.
+// Clear any saved opt-in and leave replies to the app's native composer.
+static BOOL WebReplyFallbackAllowed(void) {
+    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:@"reply_in_webview"] != nil) {
+        [defaults removeObjectForKey:@"reply_in_webview"];
+    }
+    return NO;
+}
+
 // Injected into the reply webview: hooks fetch/XHR to capture the new post's ID from
 // the web CreateTweet response, since there's no native completion callback to read.
 static NSString* const ReplyCaptureScript =
@@ -191,7 +203,7 @@ static BOOL openAuthenticatedTweetWebView(NSString* statusID) {
                         scribeElement:(__unsafe_unretained id)scribeElement
                            parameters:(__unsafe_unretained id)parameters
                        originalStatus:(__unsafe_unretained TFNTwitterStatus*)originalStatus {
-    if (![BHTSettings boolForKey:@"reply_in_webview"]) {
+    if (!WebReplyFallbackAllowed()) {
         return %orig;
     }
 
@@ -213,7 +225,7 @@ static BOOL openAuthenticatedTweetWebView(NSString* statusID) {
 
 %hook T1PersistentComposeViewController
 - (void)persistentComposeViewDidTap:(id)composeView {
-    if (![BHTSettings boolForKey:@"reply_in_webview"]) {
+    if (!WebReplyFallbackAllowed()) {
         return %orig;
     }
 

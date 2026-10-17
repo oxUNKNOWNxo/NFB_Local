@@ -192,9 +192,14 @@
         NSString* title = [self localizedTitleForEntry:toggleData];
         NSString* subtitle = [self localizedDetailForKey:key];
         [cell configureWithTitle:title subtitle:subtitle];
-        BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key]
-                              ?: toggleData[@"default"] boolValue];
+        BOOL isDisabled = [toggleData[@"disabled"] boolValue];
+        BOOL isEnabled = isDisabled
+                             ? NO
+                             : [[[NSUserDefaults standardUserDefaults] objectForKey:key]
+                                    ?: toggleData[@"default"] boolValue];
         cell.toggleSwitch.on = isEnabled;
+        cell.toggleSwitch.enabled = !isDisabled;
+        cell.contentView.alpha = isDisabled ? 0.55 : 1.0;
         objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         [cell addTarget:self
                       action:@selector(switchChanged:)

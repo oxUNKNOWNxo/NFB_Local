@@ -297,8 +297,8 @@
 "BOLD_FONTS_PICKER_OPTION_TITLE" = "Choose a bold font";
 
 /*Labs*/
-"REPLY_IN_WEBVIEW_TITLE" = "Reply in web view";
-"REPLY_IN_WEBVIEW_DETAIL" = "Fallback if replies fail to send. Replies on x.com instead of in the app.";
+"REPLY_IN_WEBVIEW_TITLE" = "Web reply fallback (disabled)";
+"REPLY_IN_WEBVIEW_DETAIL" = "Disabled on X 12.33 because web replies can trigger X's anti-automation protection. Replies use the normal in-app composer.";
 
 /*Debug*/
 "FLEX_TWITTER_TITLE" = "Debug mode";

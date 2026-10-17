@@ -443,6 +443,7 @@ static NSDictionary<NSString*, NSDictionary*>* BHTSettingsPages(void) {
                 @"settings": @[
                     @{@"key": @"reply_in_webview",
                       @"default": @NO,
+                      @"disabled": @YES,
                       @"type": @"toggle"}
                 ]
             },

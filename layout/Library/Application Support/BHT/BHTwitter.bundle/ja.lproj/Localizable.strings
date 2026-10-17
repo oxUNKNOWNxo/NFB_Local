@@ -297,8 +297,8 @@
 "BOLD_FONTS_PICKER_OPTION_TITLE" = "太字フォントを選択";
 
 /*Labs*/
-"REPLY_IN_WEBVIEW_TITLE" = "ウェブビューで返信";
-"REPLY_IN_WEBVIEW_DETAIL" = "アテステーションを回避するため、返信ボックスをウェブビューで開きます。";
+"REPLY_IN_WEBVIEW_TITLE" = "Web返信フォールバック（無効）";
+"REPLY_IN_WEBVIEW_DETAIL" = "X 12.33ではWeb返信が自動操作判定を受ける可能性があるため無効化しています。返信には通常のアプリ内返信画面を使用します。";
 
 /*Debug*/
 "FLEX_TWITTER_TITLE" = "デバッグモード";
