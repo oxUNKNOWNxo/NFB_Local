@@ -481,3 +481,9 @@
 /* macOS app icon alert */
 "APP_ICON_SETTINGS_MAC_ALERT_TITLE" = "アイコンの変更に失敗";
 "APP_ICON_SETTINGS_MAC_ALERT_MESSAGE" = "macOSではアイコンを変更できません。これはApple側の制限です。";
+
+/*Post interaction counts / source labels (v7.2.0)*/
+"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@  リポスト: %@";
+"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リポスト: %lld";
+"RESTORE_TWEET_LABELS_TITLE" = "投稿元ラベルを表示";
+"RESTORE_TWEET_LABELS_DETAIL" = "ポストがどのクライアントから投稿されたかを表示します。";
