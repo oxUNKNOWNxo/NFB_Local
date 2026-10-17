@@ -1,0 +1,161 @@
+name: Inspect upstream Twitter binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "NeoFreeBird release tag (blank = latest)"
+        default: ""
+        required: false
+        type: string
+  push:
+    branches:
+      - 'automation/inspect-upstream-*'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Inspect Twitter selectors
+    runs-on: macos-latest
+
+    steps:
+      - name: Resolve official Twitter TrollStore asset
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REQUESTED_TAG:-}" ]; then
+            API_URL="https://api.github.com/repos/NeoFreeBird/app/releases/tags/${REQUESTED_TAG}"
+          else
+            API_URL="https://api.github.com/repos/NeoFreeBird/app/releases/latest"
+          fi
+
+          RELEASE_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "$API_URL")
+
+          TAG=$(printf '%s' "$RELEASE_JSON" | jq -r '.tag_name')
+          ASSET_URL=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .browser_download_url' | head -n1)
+          ASSET_NAME=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .name' | head -n1)
+
+          test -n "$TAG"
+          test -n "$ASSET_URL"
+          test "$ASSET_URL" != "null"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          echo "asset=$ASSET_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Download and extract
+        env:
+          ASSET_URL: ${{ steps.release.outputs.url }}
+        run: |
+          set -euo pipefail
+          curl -fL --retry 4 --retry-delay 2 "$ASSET_URL" -o upstream.tipa
+          mkdir extracted
+          unzip -q upstream.tipa -d extracted
+          APP=$(find extracted/Payload -maxdepth 2 -type d -name '*.app' | head -n1)
+          test -n "$APP"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Inspect Home timeline compatibility
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          ASSET_NAME: ${{ steps.release.outputs.asset }}
+        run: |
+          set -euo pipefail
+
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
+          MAIN="$APP/$EXECUTABLE"
+          test -f "$MAIN"
+
+          cat > required-selectors.txt <<'EOF'
+          TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
+          numberOfTabsIn:
+          segmentedViewController:descriptorAtIndex:
+          segmentedViewController:pageViewControllerAtIndex:
+          segmentedViewController:shouldSelectViewControllerAtIndex:
+          segmentedViewController:isPrewarmableTabAtIndex:
+          segmentedViewController:isUnreadIndicatorTabAtIndex:
+          segmentedViewController:menuForTabAtIndex:
+          segmentedViewController:tabGroupAtIndex:
+          segmentedViewController:didTapTabAtIndex:
+          segmentedViewController:didLongPressAtIndex:
+          selectTimelineVariant:shouldRefresh:
+          selectFilteredTimelineVariant:shouldRefresh:
+          clearLastSelectedTabIdentifier
+          segmentedViewController
+          currentIndex
+          reloadDataWithSelectingIndex:
+          pinnedTimelinesRepository:didChangeWithPinnedTimelineModels:
+          tfn_navigationBarAccessoryView
+          updatePinnedTimelines:
+          fetchPinnedTimelinesWithThrottleEnabled:
+          EOF
+          sed -i '' 's/^          //' required-selectors.txt
+
+          : > selector-matches.txt
+          while IFS= read -r -d '' file; do
+            if file "$file" | grep -q 'Mach-O'; then
+              rel="${file#$APP/}"
+              strings -a "$file" 2>/dev/null | grep -Ff required-selectors.txt | \
+                sed "s#^#${rel}: #" >> selector-matches.txt || true
+            fi
+          done < <(find "$APP" -type f -print0)
+
+          {
+            echo "NeoFreeBird release: $RELEASE_TAG"
+            echo "Official asset: $ASSET_NAME"
+            echo "Twitter app version: $APP_VERSION"
+            echo "Executable: $EXECUTABLE"
+            echo
+            echo "Required selector/token results:"
+          } > selector-report.txt
+
+          missing=0
+          while IFS= read -r token; do
+            if grep -Fq "$token" selector-matches.txt; then
+              echo "PASS  $token" | tee -a selector-report.txt
+            else
+              echo "FAIL  $token" | tee -a selector-report.txt
+              missing=$((missing + 1))
+            fi
+          done < required-selectors.txt
+
+          {
+            echo
+            echo "Matched locations:"
+            sort -u selector-matches.txt
+          } >> selector-report.txt
+
+          # Objective-C metadata is useful for confirming that the Swift Home
+          # container still exposes the data-source methods, not merely that an
+          # unrelated binary contains the same selector text.
+          otool -ov "$MAIN" > objc-metadata.txt 2>/dev/null || true
+          grep -n -E -B 8 -A 120 \
+            'HomeTimelineContainerViewController|numberOfTabsIn:|descriptorAtIndex:|pageViewControllerAtIndex:|reloadDataWithSelectingIndex:' \
+            objc-metadata.txt > home-objc-metadata.txt || true
+
+          cat selector-report.txt
+          if [ "$missing" -ne 0 ]; then
+            echo "Missing $missing required Home selector/token(s)." >&2
+            exit 1
+          fi
+
+      - name: Upload inspection report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upstream-binary-inspection
+          path: |
+            selector-report.txt
+            selector-matches.txt
+            home-objc-metadata.txt
+          if-no-files-found: warn
