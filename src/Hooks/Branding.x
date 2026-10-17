@@ -207,6 +207,95 @@ static NSAttributedString* RestoreTwitterAttributed(NSAttributedString* input) {
     return result;
 }
 
+// MARK: - Recover host strings when a resource bundle lookup falls through
+//
+// X 12.33 has several toast paths which can ask the wrong NSBundle for a
+// localization key. Foundation then returns the key verbatim even though
+// the translation exists in one of X's Swift-package resource bundles.
+// Load those official tables directly and use them only when %orig is
+// unresolved, so normal localization behavior remains untouched.
+static NSString* TwitterLocalizationBaseLanguage(NSString* language) {
+    NSString* normalized =
+        [language stringByReplacingOccurrencesOfString:@"_" withString:@"-"];
+    return [normalized componentsSeparatedByString:@"-"].firstObject;
+}
+
+static NSDictionary<NSString*, NSString*>* TwitterHostLocalizationFallbackTable(void) {
+    static NSDictionary<NSString*, NSString*>* table = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        NSString* appLanguage =
+            [[NSBundle mainBundle] preferredLocalizations].firstObject;
+        if (appLanguage.length == 0) {
+            appLanguage = [NSLocale preferredLanguages].firstObject ?: @"en";
+        }
+
+        NSString* appCode = TwitterLocalizationBaseLanguage(appLanguage);
+        NSMutableDictionary<NSString*, NSString*>* merged =
+            [NSMutableDictionary dictionary];
+        NSArray<NSString*>* bundleNames = @[
+            @"T1Strings_T1Strings.bundle",
+            @"ChatCore_ChatStrings.bundle",
+            @"TwitterSharedStrings_TwitterSharedStrings.bundle"
+        ];
+
+        for (NSString* bundleName in bundleNames) {
+            NSString* bundlePath =
+                [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:bundleName];
+            NSBundle* resourceBundle = [NSBundle bundleWithPath:bundlePath];
+            if (!resourceBundle) {
+                continue;
+            }
+
+            NSString* localization =
+                [NSBundle preferredLocalizationsFromArray:resourceBundle.localizations
+                                           forPreferences:@[appLanguage]]
+                    .firstObject;
+            if (localization.length == 0 ||
+                ![appCode isEqualToString:
+                             TwitterLocalizationBaseLanguage(localization)]) {
+                continue;
+            }
+
+            NSString* stringsPath =
+                [resourceBundle pathForResource:@"Localizable"
+                                        ofType:@"strings"
+                                   inDirectory:nil
+                               forLocalization:localization];
+            NSData* data = stringsPath ? [NSData dataWithContentsOfFile:stringsPath] : nil;
+            if (!data) {
+                continue;
+            }
+
+            id plist = [NSPropertyListSerialization propertyListWithData:data
+                                                                 options:NSPropertyListImmutable
+                                                                  format:NULL
+                                                                   error:nil];
+            if (![plist isKindOfClass:[NSDictionary class]]) {
+                continue;
+            }
+
+            [(NSDictionary*)plist enumerateKeysAndObjectsUsingBlock:^(id key, id value, BOOL* stop) {
+                if ([key isKindOfClass:[NSString class]] &&
+                    [value isKindOfClass:[NSString class]]) {
+                    merged[key] = value;
+                }
+            }];
+        }
+
+        table = [merged copy];
+    });
+    return table ?: @{};
+}
+
+static NSString* TwitterHostLocalizationFallbackForKey(NSString* key) {
+    if (key.length == 0) {
+        return nil;
+    }
+    NSString* value = TwitterHostLocalizationFallbackTable()[key];
+    return [value isKindOfClass:[NSString class]] ? value : nil;
+}
+
 // MARK: - Rename localized strings
 // Every UI string routes through this Foundation method in 12.3, so the rename
 // applies broadly. Skip our own bundle so the tweak's strings aren't
@@ -216,8 +305,22 @@ static NSAttributedString* RestoreTwitterAttributed(NSAttributedString* input) {
                              value:(NSString*)value
                              table:(NSString*)tableName {
     NSString* result = %orig;
+    NSBundle* tweakBundle = [BHTBundle sharedBundle].mainBundle;
+
+    // A valid localized result must not be the key itself. X 12.33 can hit this
+    // path for composition-complete toasts and their action/dismiss labels even
+    // though the Japanese strings are present in the app. Recover the official
+    // value before applying optional Twitter terminology restoration.
+    if (self != tweakBundle && key.length > 0 &&
+        (result.length == 0 || [result isEqualToString:key])) {
+        NSString* fallback = TwitterHostLocalizationFallbackForKey(key);
+        if (fallback.length > 0) {
+            result = fallback;
+        }
+    }
+
     if (![BHTSettings boolForKey:@"restore_twitter_names"] ||
-        self == [BHTBundle sharedBundle].mainBundle) {
+        self == tweakBundle) {
         return result;
     }
 
