@@ -23,14 +23,11 @@ jobs:
           set -euo pipefail
           FILE='layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings'
           if ! grep -Fq '"POST_INTERACTIONS_COUNTS_TITLE"' "$FILE"; then
-            cat >> "$FILE" <<'EOF'
-
-/*Post interaction counts / source labels (v7.2.0)*/
-"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@  リポスト: %@";
-"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リポスト: %lld";
-"RESTORE_TWEET_LABELS_TITLE" = "投稿元ラベルを表示";
-"RESTORE_TWEET_LABELS_DETAIL" = "ポストがどのクライアントから投稿されたかを表示します。";
-EOF
+            printf '\n%s\n' '/*Post interaction counts / source labels (v7.2.0)*/' >> "$FILE"
+            printf '%s\n' '"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@  リポスト: %@";' >> "$FILE"
+            printf '%s\n' '"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リポスト: %lld";' >> "$FILE"
+            printf '%s\n' '"RESTORE_TWEET_LABELS_TITLE" = "投稿元ラベルを表示";' >> "$FILE"
+            printf '%s\n' '"RESTORE_TWEET_LABELS_DETAIL" = "ポストがどのクライアントから投稿されたかを表示します。";' >> "$FILE"
           fi
           rm -f .fix-v720-ja .validate-work-source
           rm -f .github/workflows/fix-v720-ja.yml
