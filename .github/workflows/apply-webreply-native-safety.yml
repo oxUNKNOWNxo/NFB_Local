@@ -18,96 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Disable web reply fallback on X 12.33
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          from pathlib import Path
-          import re
+      - name: Apply patch
+        run: python3 .github/scripts/apply_webreply_native_safety.py
 
-          # 1. Make the WebReply hooks always fall back to X's native reply flow,
-          #    and clear any previously persisted opt-in to the web fallback.
-          p = Path('src/Hooks/WebReply.x')
-          text = p.read_text()
-          anchor = 'static const void* ReplyWebViewDismissingKey = &ReplyWebViewDismissingKey;\n'
-          helper = r'''
-
-// X 12.33 can reject authenticated x.com intent replies with error 226
-// (automated-request protection). Do not attempt to bypass that protection.
-// Clear any saved opt-in and leave replies to the app's native composer.
-static BOOL WebReplyFallbackAllowed(void) {
-    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-    if ([defaults objectForKey:@"reply_in_webview"] != nil) {
-        [defaults removeObjectForKey:@"reply_in_webview"];
-    }
-    return NO;
-}
-'''
-          if 'WebReplyFallbackAllowed' not in text:
-              if anchor not in text:
-                  raise SystemExit('WebReply anchor not found')
-              text = text.replace(anchor, anchor + helper, 1)
-          text = text.replace('if (![BHTSettings boolForKey:@"reply_in_webview"]) {',
-                              'if (!WebReplyFallbackAllowed()) {')
-          p.write_text(text)
-
-          # 2. Mark the Labs toggle disabled so users are not invited back into
-          #    the web path while it is unsafe on the current base app.
-          p = Path('src/Core/BHTSettings.m')
-          text = p.read_text()
-          old = '''                    @{@"key": @"reply_in_webview",\n                      @"default": @NO,\n                      @"type": @"toggle"}\n'''
-          new = '''                    @{@"key": @"reply_in_webview",\n                      @"default": @NO,\n                      @"disabled": @YES,\n                      @"type": @"toggle"}\n'''
-          if old not in text:
-              raise SystemExit('reply_in_webview registry entry not found')
-          text = text.replace(old, new, 1)
-          p.write_text(text)
-
-          # 3. Teach the generic settings renderer how to display a disabled
-          #    toggle. Disabled preferences are shown off and cannot be changed.
-          p = Path('src/Settings/ModernSettingsPageViewController.m')
-          text = p.read_text()
-          old = '''        BOOL isEnabled = [[[NSUserDefaults standardUserDefaults] objectForKey:key]\n                              ?: toggleData[@"default"] boolValue];\n        cell.toggleSwitch.on = isEnabled;\n        objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);\n'''
-          new = '''        BOOL isDisabled = [toggleData[@"disabled"] boolValue];\n        BOOL isEnabled = isDisabled\n                             ? NO\n                             : [[[[NSUserDefaults standardUserDefaults] objectForKey:key]\n                                    ?: toggleData[@"default"] description] boolValue];\n        cell.toggleSwitch.on = isEnabled;\n        cell.toggleSwitch.enabled = !isDisabled;\n        cell.contentView.alpha = isDisabled ? 0.55 : 1.0;\n        objc_setAssociatedObject(cell.toggleSwitch, @"prefKey", key, OBJC_ASSOCIATION_RETAIN_NONATOMIC);\n'''
-          if old not in text:
-              raise SystemExit('settings toggle renderer anchor not found')
-          text = text.replace(old, new, 1)
-          p.write_text(text)
-
-          # 4. Explain the disabled setting in English and Japanese.
-          values = {
-              'en': (
-                  'Web reply fallback (disabled)',
-                  "Disabled on X 12.33 because web replies can trigger X's anti-automation protection. Replies use the normal in-app composer."
-              ),
-              'ja': (
-                  'Web返信フォールバック（無効）',
-                  'X 12.33ではWeb返信が自動操作判定を受ける可能性があるため無効化しています。返信には通常のアプリ内返信画面を使用します。'
-              ),
-          }
-          base = Path('layout/Library/Application Support/BHT/BHTwitter.bundle')
-          for lang, (title, detail) in values.items():
-              lp = base / f'{lang}.lproj' / 'Localizable.strings'
-              s = lp.read_text()
-              s, n1 = re.subn(r'"REPLY_IN_WEBVIEW_TITLE"\s*=\s*"[^"]*";',
-                              f'"REPLY_IN_WEBVIEW_TITLE" = "{title}";', s, count=1)
-              s, n2 = re.subn(r'"REPLY_IN_WEBVIEW_DETAIL"\s*=\s*"[^"]*";',
-                              f'"REPLY_IN_WEBVIEW_DETAIL" = "{detail}";', s, count=1)
-              if n1 != 1 or n2 != 1:
-                  raise SystemExit(f'localization keys not found for {lang}')
-              lp.write_text(s)
-
-          # 5. Bump the local build number.
-          p = Path('control')
-          text = p.read_text()
-          if 'Version: 7.2.2' not in text:
-              raise SystemExit('unexpected current local version')
-          p.write_text(text.replace('Version: 7.2.2', 'Version: 7.2.3', 1))
-          PY
-
-          rm -f .apply-webreply-native-safety
-          rm -f .github/workflows/apply-webreply-native-safety.yml
-
-      - name: Validate localization and patch
+      - name: Validate
         run: |
           set -euo pipefail
           python3 check_localization.py ja
@@ -119,6 +33,9 @@ static BOOL WebReplyFallbackAllowed(void) {
       - name: Commit patch
         run: |
           set -euo pipefail
+          rm -f .apply-webreply-native-safety
+          rm -f .github/workflows/apply-webreply-native-safety.yml
+          rm -f .github/scripts/apply_webreply_native_safety.py
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
