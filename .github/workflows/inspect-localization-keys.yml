@@ -1,0 +1,96 @@
+name: Inspect Twitter localization keys
+
+on:
+  push:
+    branches:
+      - 'automation/inspect-upstream-localization-20261017'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: macos-latest
+    steps:
+      - name: Resolve official Twitter TrollStore asset
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RELEASE_JSON=$(curl -fsSL \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/NeoFreeBird/app/releases/latest)
+          TAG=$(printf '%s' "$RELEASE_JSON" | jq -r '.tag_name')
+          ASSET_URL=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .browser_download_url' | head -n1)
+          ASSET_NAME=$(printf '%s' "$RELEASE_JSON" | jq -r \
+            '.assets[] | select(.name | test("^NeoFreeBird-trollstore-Twitter_.*\\.tipa$")) | .name' | head -n1)
+          test -n "$ASSET_URL"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "url=$ASSET_URL" >> "$GITHUB_OUTPUT"
+          echo "asset=$ASSET_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Download and extract
+        env:
+          ASSET_URL: ${{ steps.release.outputs.url }}
+        run: |
+          set -euo pipefail
+          curl -fL --retry 4 --retry-delay 2 "$ASSET_URL" -o upstream.tipa
+          mkdir extracted
+          unzip -q upstream.tipa -d extracted
+          APP=$(find extracted/Payload -maxdepth 2 -type d -name '*.app' | head -n1)
+          test -n "$APP"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Inspect raw localization key occurrences
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          ASSET_NAME: ${{ steps.release.outputs.asset }}
+        run: |
+          set -euo pipefail
+          REPORT=localization-key-report.txt
+          : > "$REPORT"
+          {
+            echo "NeoFreeBird release: $RELEASE_TAG"
+            echo "Asset: $ASSET_NAME"
+            echo "App: $APP"
+            echo
+            echo "=== Files containing target tokens (raw scan) ==="
+          } >> "$REPORT"
+
+          TOKENS='COMPOSITION_COMPLETE_|DM_MESSAGE_ACTION|DISM(I)?SS_LABEL'
+          while IFS= read -r -d '' f; do
+            if LC_ALL=C grep -aE -q "$TOKENS" "$f" 2>/dev/null; then
+              rel="${f#$APP/}"
+              echo "--- $rel" >> "$REPORT"
+              strings -a "$f" 2>/dev/null | grep -E -C 3 "$TOKENS" >> "$REPORT" || true
+              if plutil -p "$f" >/tmp/plutil.out 2>/dev/null; then
+                echo "[plutil]" >> "$REPORT"
+                grep -E -C 3 "$TOKENS" /tmp/plutil.out >> "$REPORT" || true
+              fi
+              echo >> "$REPORT"
+            fi
+          done < <(find "$APP" -type f -print0)
+
+          {
+            echo
+            echo "=== Localization files whose decoded plist contains target tokens ==="
+          } >> "$REPORT"
+          while IFS= read -r -d '' f; do
+            if plutil -p "$f" >/tmp/plutil.out 2>/dev/null && grep -E -q "$TOKENS" /tmp/plutil.out; then
+              rel="${f#$APP/}"
+              echo "--- $rel" >> "$REPORT"
+              grep -E -C 5 "$TOKENS" /tmp/plutil.out >> "$REPORT" || true
+              echo >> "$REPORT"
+            fi
+          done < <(find "$APP" -type f \( -name '*.strings' -o -name '*.stringsdict' -o -name '*.loctable' -o -name '*.plist' \) -print0)
+
+          cat "$REPORT"
+
+      - name: Upload report
+        uses: actions/upload-artifact@v7
+        with:
+          name: twitter-localization-key-report
+          path: localization-key-report.txt
