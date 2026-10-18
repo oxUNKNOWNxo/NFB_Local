@@ -218,4 +218,5 @@ jobs:
           name: output
           path: ${{ steps.package.outputs.filename }}
           archive: false
+          retention-days: 3
           if-no-files-found: error
