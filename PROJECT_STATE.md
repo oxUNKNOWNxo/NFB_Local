@@ -1,6 +1,6 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-10-18 (JST)
+最終更新: 2026-10-19 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
@@ -17,6 +17,21 @@
 - 前回までの検証済み成果物: **7.2.3 / Twitter 12.33**、Package run `39023655029`、artifact `12096963813`、SHA-256 `f413be4831b9d4ed6c20f38d818250037f3a0237b8af48619f5a0ca073636068`。7.2.3ではWeb返信フォールバックを無効化し、ネイティブ返信経路へ戻した。
 - 7.2.4のPackage/Promote結果は `automation/upstream-v7-ready-20261018-l10n` の `Package` Actions履歴および連動する `Promote verified update` 履歴で確認する。
 - 以下の「## 2. 現在の基準バージョン」は**2026-10-17時点の7.2.1検証履歴**として残してあり、最新情報はこの「## 0」を優先する。
+
+---
+
+## 0.1 GitHub Actions Artifact保存容量の管理（2026-10-19）
+
+GitHub FreeのActions保存容量0.5 GBの上限通知を受け、`Package` Workflowのアップロード設定を変更した。
+
+- `.github/workflows/package.yml` の `actions/upload-artifact@v7` に **`retention-days: 3`** を追加。**これ以降に生成するTIPA成果物**は原則3日間保存する（既存Artifactの保存期限は遡及変更されない）。
+- コミット: `5c0ad17fd3a39d1dfecf2d01cfe410a9fc332154`。
+- GitHub Actionsの一時的な `Cleanup old NFB_Local TIPA artifacts` Workflow（run `39177274346`）で、**7.2.4より古い `local_*.tipa` のArtifactだけを12件削除**。
+- 削除済み容量: **3,090,524,796 bytes（約3.09 GB）**。旧Package run自体やソース、コミットは削除していないが、**過去のTIPA Artifactリンクはダウンロード不可**。
+- 保持した最新成果物: **`local_7.2.4_12.33.tipa`**、Artifact ID **`12122537386`**、サイズ **259,043,621 bytes**、Package run **`39091259800`**。
+- 一時削除Workflowと起動マーカーは処理成功後に作業ブランチから取り除いた。恒久的な強権限削除Workflowを `main` に残していない。
+- 無料枠の使用量通知／請求表示はGitHub側の集計周期に依存し、今回の削除だけで同一請求期間の累計消費量が即座に0へ戻るとは限らない。
+- ユーザーが別途保存しない場合、新しいTIPAは3日後に入手できなくなるため、必要なビルドは早めにダウンロードすること。
 
 ---
 
