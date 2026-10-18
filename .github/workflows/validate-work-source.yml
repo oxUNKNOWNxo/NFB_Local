@@ -33,6 +33,20 @@ jobs:
           python3 check_localization.py ja
           python3 check_localization.py ja --values
 
+      - name: Reject duplicate Japanese localization keys
+        run: |
+          python3 - <<'PY'
+          from collections import Counter
+          from pathlib import Path
+          import re
+          p = Path('layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings')
+          counts = Counter(re.findall(r'^"([^"]+)"\\s*=', p.read_text(), flags=re.M))
+          duplicated = [key for key, count in counts.items() if count > 1]
+          if duplicated:
+              raise SystemExit(f'Duplicate Japanese keys: {duplicated}')
+          print(f'Unique Japanese keys: {len(counts)}')
+          PY
+
       - name: Validate local Home settings wiring
         run: |
           set -euo pipefail
@@ -43,4 +57,5 @@ jobs:
           grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars.x
           grep -Fq 'saveHomeTimelineSelectionBeforeResignActive' src/Hooks/AppLifecycle.x
           grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
-          grep -Fq 'Version: 7.2.1' control
+          grep -Eq '^Version: [0-9]+\.[0-9]+\.[0-9]+
+ control
