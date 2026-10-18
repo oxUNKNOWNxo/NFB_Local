@@ -1,9 +1,22 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-10-17 (JST)
+最終更新: 2026-10-18 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+## 0. 現行状態（2026-10-18）
+
+- 公式release: **v7.2.0**、Twitterブランドのベースアプリ: **12.33**（ともに変更なし）。
+- 今回取り込む公式 `v7` 先端: **`b52b713f28430684295ba0b0847a8fd50b879a05`**。
+- 基準 `24b03ffb930eaf4a6a6f9bf6884d39cd1cffe689` から上流3コミット。変更ファイルは `ja.lproj`、`es.lproj`、`ar.lproj` の `Localizable.strings` のみ。
+- NFB_Local版: **7.2.4**。日本語は元の既存訳を優先し、上流に追加された重複キーを除去した。日本語の固有キー数は **307**。
+- 上流のスペイン語・アラビア語翻訳を反映。Home／返信関連のhook、`hide_for_you_tab`、`restore_home_tab_selection`、TrollStoreパッケージングは従来どおり。
+- 前回までの検証済み成果物: **7.2.3 / Twitter 12.33**、Package run `39023655029`、artifact `12096963813`、SHA-256 `f413be4831b9d4ed6c20f38d818250037f3a0237b8af48619f5a0ca073636068`。7.2.3ではWeb返信フォールバックを無効化し、ネイティブ返信経路へ戻した。
+- 7.2.4のPackage/Promote結果は `automation/upstream-v7-ready-20261018-l10n` の `Package` Actions履歴および連動する `Promote verified update` 履歴で確認する。
+- 以下の「## 2. 現在の基準バージョン」は**2026-10-17時点の7.2.1検証履歴**として残してあり、最新情報はこの「## 0」を優先する。
 
 ---
 
