@@ -40,7 +40,7 @@ jobs:
           from pathlib import Path
           import re
           p = Path('layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings')
-          counts = Counter(re.findall(r'^"([^"]+)"\\s*=', p.read_text(), flags=re.M))
+          counts = Counter(re.findall(r'^"([^"]+)"[ \t]*=', p.read_text(), flags=re.M))
           duplicated = [key for key, count in counts.items() if count > 1]
           if duplicated:
               raise SystemExit(f'Duplicate Japanese keys: {duplicated}')
@@ -57,5 +57,4 @@ jobs:
           grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars.x
           grep -Fq 'saveHomeTimelineSelectionBeforeResignActive' src/Hooks/AppLifecycle.x
           grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
-          grep -Eq '^Version: [0-9]+\.[0-9]+\.[0-9]+
- control
+          grep -Fq 'Version: 7.2.4' control
