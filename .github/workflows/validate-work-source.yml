@@ -57,5 +57,4 @@ jobs:
           grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars.x
           grep -Fq 'saveHomeTimelineSelectionBeforeResignActive' src/Hooks/AppLifecycle.x
           grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
-          grep -Eq '^Version: [0-9]+[.][0-9]+[.][0-9]+
- control
+          grep -Eq 'Version: [[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+' control
