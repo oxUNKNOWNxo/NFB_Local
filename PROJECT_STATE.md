@@ -7,6 +7,21 @@
 
 ---
 
+## 0. 最新ソース更新（2026-10-19、7.2.5）
+
+- 公式release: **v7.2.0**、Twitterアプリ: **12.33**（今回変更なし）。
+- 上流 `v7` の取り込み先端: **`b08f9792302bb5d1822c9e80941db0c0764ba527`**。
+- 前回取り込み先端 `b52b713f28430684295ba0b0847a8fd50b879a05` から**1コミット**。変更は `src/AppIcon/AppIconViewController.m` のみ。
+- アイコン一覧のプレビュー作成を非同期化、`NSCache` によるサムネイルキャッシュ、読み込み中インジケーターを追加。メインスレッドでコレクションを更新する設計。
+- 同期は `automation/upstream-v7-work-20261019-appicon-async` 上の `Sync upstream source` run `39177944198` で **3-way競合なし**。
+- ローカル版: **7.2.5**。旧 `hide_for_you_tab`、`restore_home_tab_selection`、Web返信フォールバック停止、設定日本語化、TrollStore `@rpath` 補正を維持。
+- 日本語設定は **307/307** が基準。今回上流の `en.lproj` と `ja.lproj` には変更なし。
+- Workソース検証、Package/TrollStore再梱包、Promoteの実行結果は別途該当Actions runで確認する。**実機確認とビルド成功は区別**する。
+- `.github/workflows/validate-work-source.yml` の固定バージョン検査は更新ごとに古くなるため、3桁バージョンの構文検査へ変更。
+- **保存容量対策:** `Package` 成果物は今後3日間保持（既存 `package.yml` の `retention-days: 3` を維持）。旧成果物を削除する際は成功済み最新版を確認してから行う。
+
+---
+
 ## 0. 現行状態（2026-10-18）
 
 - 公式release: **v7.2.0**、Twitterブランドのベースアプリ: **12.33**（ともに変更なし）。
