@@ -16,9 +16,9 @@
 - 同期は `automation/upstream-v7-work-20261019-appicon-async` 上の `Sync upstream source` run `39177944198` で **3-way競合なし**。
 - ローカル版: **7.2.5**。旧 `hide_for_you_tab`、`restore_home_tab_selection`、Web返信フォールバック停止、設定日本語化、TrollStore `@rpath` 補正を維持。
 - 日本語設定は **307/307** が基準。今回上流の `en.lproj` と `ja.lproj` には変更なし。
-- Workソース検証、Package/TrollStore再梱包、Promoteの実行結果は別途該当Actions runで確認する。**実機確認とビルド成功は区別**する。
+- Workソース検証: `Validate work source` run `39179608259` 成功。Package run `39180338588` 成功、Promote run `39180534783` 成功。検証済みソースSHA / main SHA: `a483cd3ae7ceec2927ed98f0ec1a9fa4458b81bf`。**実機確認とビルド成功は区別**する。
 - `.github/workflows/validate-work-source.yml` の固定バージョン検査は更新ごとに古くなるため、3桁バージョンの構文検査へ変更。
-- **保存容量対策:** `Package` 成果物は今後3日間保持（既存 `package.yml` の `retention-days: 3` を維持）。旧成果物を削除する際は成功済み最新版を確認してから行う。
+- **保存容量対策:** 7.2.5の最初のPackage run `39179694374` はTIPA組立まで成功したが、Actionsの `Artifact storage quota has been hit` によりArtifactアップロード失敗。2026-10-19以降、Private Releasesへ直接TIPAを保存する方式に変更。最新Release assetの存在を確認後に旧Artifactを削除する。
 
 ---
 
@@ -37,7 +37,7 @@
 
 ## 0.1 GitHub Actions Artifact保存容量の管理（2026-10-19）
 
-GitHub FreeのActions保存容量0.5 GBの上限通知を受け、`Package` Workflowのアップロード設定を変更した。
+GitHub FreeのActions保存容量0.5 GBの上限通知を受け、当初はArtifact保存期間を短縮した。**この節は過去の対応記録であり、現在の保存方式は次の「0.2」を参照する。**
 
 - `.github/workflows/package.yml` の `actions/upload-artifact@v7` に **`retention-days: 3`** を追加。**これ以降に生成するTIPA成果物**は原則3日間保存する（既存Artifactの保存期限は遡及変更されない）。
 - コミット: `5c0ad17fd3a39d1dfecf2d01cfe410a9fc332154`。
@@ -46,7 +46,34 @@ GitHub FreeのActions保存容量0.5 GBの上限通知を受け、`Package` Work
 - 保持した最新成果物: **`local_7.2.4_12.33.tipa`**、Artifact ID **`12122537386`**、サイズ **259,043,621 bytes**、Package run **`39091259800`**。
 - 一時削除Workflowと起動マーカーは処理成功後に作業ブランチから取り除いた。恒久的な強権限削除Workflowを `main` に残していない。
 - 無料枠の使用量通知／請求表示はGitHub側の集計周期に依存し、今回の削除だけで同一請求期間の累計消費量が即座に0へ戻るとは限らない。
-- ユーザーが別途保存しない場合、新しいTIPAは3日後に入手できなくなるため、必要なビルドは早めにダウンロードすること。
+- 上記の3日間の保存期間指定は、現在のReleases移行前の旧方式に対するものである。新しいRelease assetはActions Artifactの3日間保持の対象外。
+
+---
+
+## 0.2 GitHub ReleasesによるTIPA配布（2026-10-19以降、現行方式）
+
+Actions Artifact保存容量（Free上限0.5 GB）が上限扱いのままになり、7.2.5の初回Package run `39179694374` はTIPA生成後、`actions/upload-artifact` に失敗した。Artifact削除後もストレージ判定がすぐには更新されなかった。
+
+この問題を再発させないため、`.github/workflows/package.yml` の出力先を **Private GitHub Releases** に変更した（Workflow変更コミット `eaf6f0fdb6b3f254acb860bf986dd8c1a57b26b4`）。
+
+- `Package` は公式Twitter TrollStore版から引き続きビルド・CydiaSubstrate `@rpath` 補正・Mach-O install-name保持・`ldid`・ZIP検査を実施。
+- 最終段階は `actions/upload-artifact` ではなく `gh release create` / `gh release upload` で、**同じPrivateリポジトリ内**のタグ `nfb-local-v<LOCAL_VERSION>` に `local_<LOCAL_VERSION>_<TWITTER_VERSION>.tipa` をアップロード。
+- Releaseは `--prerelease` 扱いで、実機テスト済みの意味ではない。
+- Packageのcheckoutには `persist-credentials: false` を使用し、`GH_TOKEN` はReleaseアップロード工程のみに渡す。
+- Release assetの保存容量はActions Artifactの0.5GB枠に計上されず、`retention-days: 3` による自動消去も行われない。不要な古いReleaseを消す際は、正常な最新Releaseを確認してから行う。
+- `Promote verified update` の信頼境界は維持される。readyブランチで `package.yml` と `promote-verified-update.yml` をmainと一致させ、成功したPackage SHAだけをforceなしfast-forwardでmainへ昇格する。
+
+**最新成果物 / 実走検証（7.2.5 / Twitter 12.33）**
+
+- Package run: `39180338588` 成功
+- Promote run: `39180534783` 成功
+- 検証・昇格コミット: `a483cd3ae7ceec2927ed98f0ec1a9fa4458b81bf`
+- Release: `https://github.com/oxUNKNOWNxo/NFB_Local/releases/tag/nfb-local-v7.2.5`
+- TIPA: `https://github.com/oxUNKNOWNxo/NFB_Local/releases/download/nfb-local-v7.2.5/local_7.2.5_12.33.tipa`
+- サイズ: `259046674` bytes
+- SHA-256: `7be1d28cfc2dfee4646c664bc495a6ecc93f1e5fd3ba95313a188fd7568c50d0`
+- コンパイル・再梱包・`@rpath` 補正・ZIP検査・Release uploadまで成功、**実機動作未確認**。
+- 2026-10-19に監視タスクの指示もRelease配布方式と一時的な書込エラー時の監視継続へ更新し、再有効化した。
 
 ---
 
