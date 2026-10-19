@@ -74,6 +74,7 @@ Actions Artifact保存容量（Free上限0.5 GB）が上限扱いのままにな
 - SHA-256: `7be1d28cfc2dfee4646c664bc495a6ecc93f1e5fd3ba95313a188fd7568c50d0`
 - コンパイル・再梱包・`@rpath` 補正・ZIP検査・Release uploadまで成功、**実機動作未確認**。
 - 2026-10-19に監視タスクの指示もRelease配布方式と一時的な書込エラー時の監視継続へ更新し、再有効化した。
+- Release検証後、一時的な `Purge superseded Actions TIPA artifact` run `39180772652` が成功し、旧7.2.4のActions Artifact ID `12122537386` を削除。削除用Workflow/起動マーカーは作業ブランチから撤去済み。7.2.5のPrivate Release assetは維持。
 
 ---
 
