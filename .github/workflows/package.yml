@@ -31,7 +31,7 @@ jobs:
     name: Package
     runs-on: macos-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout
@@ -39,6 +39,7 @@ jobs:
         with:
           path: main
           submodules: recursive
+          persist-credentials: false
 
       - name: Dependencies
         run: brew install make dpkg ldid jq
@@ -212,11 +213,26 @@ jobs:
           echo "filename=$OUTPUT" >> "$GITHUB_OUTPUT"
           ls -lh "$OUTPUT"
 
-      - name: Upload
-        uses: actions/upload-artifact@v7
-        with:
-          name: output
-          path: ${{ steps.package.outputs.filename }}
-          archive: false
-          retention-days: 3
-          if-no-files-found: error
+      - name: Publish private TrollStore Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TIPA_FILE: ${{ steps.package.outputs.filename }}
+          BUILT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test -f "$TIPA_FILE"
+          LOCAL_VERSION=$(awk '/^Version:/ {print $2}' main/control)
+          TAG="nfb-local-v${LOCAL_VERSION}"
+          SHA256=$(shasum -a 256 "$TIPA_FILE" | awk '{print $1}')
+          NOTES="TrollStore-compatible NFB_Local ${LOCAL_VERSION} build from verified source ${BUILT_SHA}. Device testing is separate from Package success. SHA-256: ${SHA256}"
+
+          if ! gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "$GH_REPO" --target "$BUILT_SHA" \
+              --title "NFB_Local ${LOCAL_VERSION} (TrollStore)" --notes "$NOTES" --prerelease
+          fi
+
+          gh release upload "$TAG" "$TIPA_FILE" --repo "$GH_REPO" --clobber
+          gh release view "$TAG" --repo "$GH_REPO" --json url,assets \
+            --jq '{url: .url, assets: [.assets[] | {name, size, url: .url}]}'
+          echo "SHA-256: $SHA256"
