@@ -96,15 +96,6 @@
 "ALWAYS_OPEN_SAFARI_TITLE" = "外部ブラウザで開く";
 "ALWAYS_OPEN_SAFARI_DETAIL" = "リンクをSafari、またはデフォルトのブラウザで開きます。";
 
-<<<<<<< /tmp/tmp.QcE52lf7P8
-=======
-"BLOCK_LINK_TRACKING_TITLE" = "リンク追跡のブロック";	
-"BLOCK_LINK_TRACKING_DETAIL" = "t.coを経由せず、バックグラウンドでのt.coのリクエストや広告クリックIDなしで、リンクを直接開きます。Twitterの危険なリンクの警告は表示されなくなります。";	
-
-"STRIP_TRACKING_PARAMS_TITLE" = "追跡パラメータの削除";	
-"STRIP_TRACKING_PARAMS_DETAIL" = "開いたリンクからutm_などの追跡タグを取り除きます。";
-
->>>>>>> /tmp/tmp.kxG6IkCnos
 "SHARING_DOMAIN_TITLE" = "共有ドメイン";
 
 /*Tweets*/
