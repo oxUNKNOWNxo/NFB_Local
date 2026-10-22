@@ -1,0 +1,3 @@
+# The upstream 8079509 commit only adds an empty line. Preserve translated local strings.
+VERSION=7.2.6
+layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings=ours
