@@ -1,9 +1,22 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-10-19 (JST)
+最終更新: 2026-10-23 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+## 0. 最新ソース更新（2026-10-23、7.2.6）
+
+- 公式最新release: **v7.2.0**。ベースTwitter本体: **12.33**（変更なし）。
+- 今回の上流統合: `b08f9792302bb5d1822c9e80941db0c0764ba527` → `fe45d6961ae3932c58fc45eef33c8d84ac571d13`（3コミット）。`src/Hooks/Timeline.x` にプロフィール経由の投稿で引用・リポスト非表示フィルタを適用しない改善と引用判定selectorの変更、フランス語翻訳更新、README変更。
+- 追加の最新上流SHA: **`8079509a39f5bb40a794d7690d99ceef89fb504b`**（2026-10-23確認）。`fe45d... ` からの差分は日本語Localizable.stringsの**空行1行のみ**であり、新しい設定キー・訳語・実装変更はない。3-way同期を実行し、既存NFB_Local訳との機械的競合はローカルの訳語優先で解消した。このSHAまでソース変更を確認済み。
+- READMEは検索回避のため意図的に空白のローカル版を維持。上流READMEとの競合は `Resolve reviewed upstream conflicts` により解消。
+- **NFB_Local: 7.2.6**。日本語設定 **307/307** を維持し、`hide_for_you_tab`、`restore_home_tab_selection`、Web返信フォールバック無効化、TrollStore用のCydiaSubstrate `@rpath` / install-name補正を保持。
+- 7.2.6のworkブランチ: `automation/upstream-v7-work-20261022-profile-timeline`。上流同期と衝突解消、`Validate work source` 実行済み。最終状態の検証・Package・Private Releaseアップロード・Promoteの結果は該当するGitHub Actions履歴で確認する。
+- 配布: Private GitHub Releasesへ `local_7.2.6_12.33.tipa` をアップロードする方式（Actions Artifact保存枠0.5 GBの制限を回避）。`package.yml` と `promote-verified-update.yml` を上流同期で変更しない。
+- **ビルド成功と実機検証は区別**する。7.2.6の実機挙動は未確認。
 
 ---
 
