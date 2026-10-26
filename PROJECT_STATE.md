@@ -7,6 +7,20 @@
 
 ---
 
+## 0. 最新ソース更新（2026-10-26、7.2.7）
+
+- 公式release: **v7.2.0**（変化なし）。Twitter本体: **12.33**（変化なし）。
+- 公式 `v7` 取り込み対象: **`e91bd046e534c280c80009cebf57f558d481d27c`**。前回取り込み済み `8079509a39f5bb40a794d7690d99ceef89fb504b` から19コミット。
+- 主な変更: 実験的Liquid Glass対応、ネイティブタブカスタマイズ、設定のリセット、Webログイン・Webセッション・投稿関連修正、テーマ・UI修正、中国語・トルコ語翻訳。
+- 3-way同期: `automation/upstream-v7-work-20261026-v7-head`。競合は `src/Core/BHTSettings.m` の実験的機能設定1件。既存 `reply_in_webview` の `disabled: YES` を維持し、新規 `liquid_glass` を同時に登録して解決。
+- Home: 上流の `HomeBars.x` 追加分を統合し、ローカル `hide_for_you_tab`（Following・固定/カスタム維持）と `restore_home_tab_selection`（コールド起動Following、同一セッションのみ復元）を維持。Web返信フォールバック無効化も維持。
+- 日本語設定: 新規9キー（Liquid Glass 3、設定リセット6）を翻訳し、**316/316** を目標として検証する。既存日本語訳を優先し重複を追加しない。
+- TrollStore: `package.yml` / `promote-verified-update.yml` を変更せず、CydiaSubstrate `@rpath`、Mach-O install-name、ldid、ZIP検査、Private Release配布を維持。
+- 作業開始時のmain: `a8f90b665acab1a684a0211f2afec98276e1b656`。
+- 検証・Package・Promote・Private Releaseの最終結果は、ready SHAに紐づくGitHub Actions履歴と `nfb-local-v7.2.7` Releaseを参照する。ビルド成功と実機動作確認は区別する。
+
+---
+
 ## 0. 最新ソース更新（2026-10-23、7.2.6）
 
 - 公式最新release: **v7.2.0**。ベースTwitter本体: **12.33**（変更なし）。
