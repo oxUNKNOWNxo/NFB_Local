@@ -252,7 +252,7 @@
 @property (nonatomic, readonly) NSArray* inlineMediaInfos;
 @end
 
-@interface _TtC16ChatConversation26MessageAttachmentAudioView : UIView
+@interface _TtC6ChatUI26MessageAttachmentAudioView : UIView
 @end
 
 #pragma mark - Host & web views
@@ -269,7 +269,6 @@
 - (void)setCurrentURL:(NSURL*)url;
 @property (nonatomic, readonly) NSURL* currentURL;
 - (WKWebView*)webView;
-- (id)updateConfiguration:(id)configuration;
 @end
 
 @interface T1WebViewController : T1BaseWebViewController
@@ -383,4 +382,15 @@
 
 @interface T1ViewControllerScribeEventObserver : NSObject
 - (void)viewControllerApplicationDidBecomeActive:(id)active;
+@end
+
+@interface T1TabCustomizationConfig : NSObject
+@property (nonatomic, readonly) _Bool isTabCustomizationEnabled;
+@end
+
+@interface T1BlockMuteActionPerformer : NSObject
+- (void)showBlockAlertForContext:(id)context;
+@end
+
+@interface _TtC14T1TwitterSwift28FleetLineAccessoryController: NSObject
 @end

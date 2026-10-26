@@ -7,6 +7,42 @@
 #import "Headers/TFNHeaders.h"
 #import "Headers/UIHeaders.h"
 #import "HookHelpers.h"
+#import <objc/runtime.h>
+
+static bool NFBLiquidGlassEnabled(void) {
+    return [BHTSettings boolForKey:@"liquid_glass"];
+}
+
+%hook T1LiquidGlassGateInstaller
+
++ (void)installGateForAccount:(id)account {
+    %orig(account);
+    ((void (*)(id, SEL, BOOL))objc_msgSend)(
+        self, @selector(installGateWithRedesignEnabled:), NFBLiquidGlassEnabled());
+}
+
++ (void)installGateWithRedesignEnabled:(BOOL)enabled {
+    %orig(NFBLiquidGlassEnabled());
+}
+
+%end
+
+%hook _TtC14T1TwitterSwift27LiquidGlassRedesignFeatures
+
+- (instancetype)initWithFeatureSwitches:(id)switches
+                isSecondFactorSatisfied:(BOOL)satisfied {
+    return %orig(switches, YES);
+}
+
+- (BOOL)isRedesignEnabled {
+    return NFBLiquidGlassEnabled();
+}
+
++ (BOOL)isQuickComposerEnabledWithFeatureSwitches:(id)switches {
+    return NFBLiquidGlassEnabled();
+}
+
+%end
 
 // MARK: - Custom accent color
 
@@ -381,7 +417,7 @@ static BOOL BHTIsExploreSearchBackgroundView(UIView* view) {
 
 - (void)didMoveToWindow {
     %orig;
-    if (self.window && BHTDimThemeEnabled()) {
+    if (self.window && BHTDimThemeEnabled() && !NFBLiquidGlassEnabled()) {
         self.backgroundColor = BHTDimBackgroundColor();
     }
 }
@@ -447,7 +483,6 @@ static NSArray* orderedTabEntries(NSArray* entries) {
 
     return orderedEntries;
 }
-
 // The single ordered spine that feeds both the tab buttons and their content, so
 // filtering/reordering here keeps taps mapped to the right panel.
 %hook T1TabbedAppNavigationViewController
@@ -475,6 +510,47 @@ static NSArray* orderedTabEntries(NSArray* entries) {
 %end
 
 // MARK: - Tab bar icon and label theming
+
+static char BHTGlassTabOriginalTintKey;
+
+static void BHTApplyGlassTabAccent(UIView* item) {
+    if (item.isAccessibilityElement) return;
+
+    Ivar field = class_getInstanceVariable(object_getClass(item), "imageView");
+    UIImageView* imageView = field ? object_getIvar(item, field) : nil;
+    if (![imageView isKindOfClass:UIImageView.class]) return;
+
+    id originalTint = objc_getAssociatedObject(imageView, &BHTGlassTabOriginalTintKey);
+    UIColor* tint;
+    if ([BHTSettings boolForKey:@"tab_bar_theming"]) {
+        if (!originalTint) {
+            objc_setAssociatedObject(imageView, &BHTGlassTabOriginalTintKey,
+                                     imageView.tintColor ?: (id)NSNull.null,
+                                     OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        }
+        tint = CurrentAccentColor();
+    } else {
+        if (!originalTint) return;
+        tint = originalTint == NSNull.null ? nil : originalTint;
+        objc_setAssociatedObject(imageView, &BHTGlassTabOriginalTintKey, nil,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (![imageView.tintColor isEqual:tint]) imageView.tintColor = tint;
+}
+
+%hook _TtC11XNavigation14TabBarItemView
+
+- (void)layoutSubviews {
+    %orig;
+    BHTApplyGlassTabAccent((UIView*)self);
+}
+
+%new
+- (void)nfb_applyGlassTabAccent {
+    BHTApplyGlassTabAccent((UIView*)self);
+}
+
+%end
 
 static BOOL updatingTabIconColor = NO;
 

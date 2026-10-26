@@ -113,6 +113,11 @@
     %orig;
 
     if ([BHTSettings boolForKey:@"hide_trends"]) {
+        UIView* viewIfLoaded = [(UIViewController*)self viewIfLoaded];
+        if (viewIfLoaded) {
+            viewIfLoaded.hidden = YES;
+            viewIfLoaded.userInteractionEnabled = NO;
+        }
         for (UIViewController* child in
              [(UIViewController*)self childViewControllers]) {
             if ([child isKindOfClass:
@@ -190,6 +195,7 @@
     if (view && view == self.messageButton &&
         [BHTSettings boolForKey:@"hide_message_button"]) {
         hidden = YES;
+        view.userInteractionEnabled = NO;
     }
     %orig(hidden, view);
 }

@@ -300,6 +300,10 @@
 "REPLY_IN_WEBVIEW_TITLE" = "Web reply fallback (disabled)";
 "REPLY_IN_WEBVIEW_DETAIL" = "Disabled on X 12.33 because web replies can trigger X's anti-automation protection. Replies use the normal in-app composer.";
 
+"LIQUID_GLASS_TITLE" = "Enable Liquid Glass";
+"LIQUID_GLASS_DETAIL" = "Enables X's new Liquid Glass interface. This is an experimental redesign and may cause issues.";
+"LIQUID_GLASS_RESTART_ALERT_MESSAGE" = "The Liquid Glass redesign requires a restart to take effect.";
+
 /*Debug*/
 "FLEX_TWITTER_TITLE" = "Debug mode";
 "FLEX_TWITTER_DETAIL" = "Enables FLEX for debugging and inspecting Twitter's views and data.";
@@ -444,6 +448,13 @@
 /* Presets — settings import and export */
 "SETTINGS_EXPORT_TITLE" = "Export settings";
 "SETTINGS_IMPORT_TITLE" = "Import settings";
+"SETTINGS_RESET_TITLE" = "Reset settings";
+
+"SETTINGS_RESET_CONFIRM_TITLE" = "Reset all settings?";
+"SETTINGS_RESET_CONFIRM_MESSAGE" = "This will restore all NeoFreeBird settings to their defaults.";
+"SETTINGS_RESET_CONFIRM_BUTTON" = "Reset";
+"SETTINGS_RESET_SUCCESS_TITLE" = "Settings reset";
+"SETTINGS_RESET_SUCCESS_MESSAGE" = "All settings have been restored. Restart the app for all changes to take effect.";
 
 "CUSTOM_SEND_SOUND_TITLE" = "Import send sound";
 "CUSTOM_SEND_SOUND_DEFAULT" = "No custom sound selected";
