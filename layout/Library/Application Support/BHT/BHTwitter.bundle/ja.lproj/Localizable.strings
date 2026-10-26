@@ -60,6 +60,11 @@
 "MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "実験的機能";
 "MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "現在テスト中の実験的な機能を利用できます。";
 
+/* Liquid Glass (experimental) */
+"LIQUID_GLASS_TITLE" = "Liquid Glassを有効にする";
+"LIQUID_GLASS_DETAIL" = "Xの新しいLiquid Glassデザインを有効にします。試験的なデザインのため、不具合が発生する場合があります。";
+"LIQUID_GLASS_RESTART_ALERT_MESSAGE" = "Liquid Glassデザインを反映するにはアプリの再起動が必要です。";
+
 "MODERN_SETTINGS_DEBUG_TITLE" = "デバッグ";
 "MODERN_SETTINGS_DEBUG_SUBTITLE" = "機能が正常に動作しない原因を調査できます。";
 
@@ -455,6 +460,14 @@
 "SETTINGS_IMPORT_SUCCESS_MESSAGE" = "%ld件の設定が適用されました。すべての変更を有効にするにはアプリを再起動してください。";
 "SETTINGS_IMPORT_RESTART_BUTTON" = "再起動";
 "SETTINGS_IMPORT_LATER_BUTTON" = "あとで";
+
+/* Reset settings */
+"SETTINGS_RESET_TITLE" = "設定をリセット";
+"SETTINGS_RESET_CONFIRM_TITLE" = "すべての設定をリセットしますか？";
+"SETTINGS_RESET_CONFIRM_MESSAGE" = "NeoFreeBirdのすべての設定を初期値に戻します。";
+"SETTINGS_RESET_CONFIRM_BUTTON" = "リセット";
+"SETTINGS_RESET_SUCCESS_TITLE" = "設定をリセットしました";
+"SETTINGS_RESET_SUCCESS_MESSAGE" = "すべての設定を初期値に戻しました。変更を完全に反映するにはアプリを再起動してください。";
 
 "SETTINGS_TRANSFER_UNREADABLE_FILE" = "ファイルを読み込めませんでした。";
 "SETTINGS_TRANSFER_MALFORMED_FILE" = "このファイルは NeoFreeBird の設定エクスポートファイルではありません。";
