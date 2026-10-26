@@ -17,7 +17,8 @@
 - 日本語設定: 新規9キー（Liquid Glass 3、設定リセット6）を翻訳し、**316/316** を目標として検証する。既存日本語訳を優先し重複を追加しない。
 - TrollStore: `package.yml` / `promote-verified-update.yml` を変更せず、CydiaSubstrate `@rpath`、Mach-O install-name、ldid、ZIP検査、Private Release配布を維持。
 - 作業開始時のmain: `a8f90b665acab1a684a0211f2afec98276e1b656`。
-- 検証・Package・Promote・Private Releaseの最終結果は、ready SHAに紐づくGitHub Actions履歴と `nfb-local-v7.2.7` Releaseを参照する。ビルド成功と実機動作確認は区別する。
+- Workソース検証: `Validate work source` run **`40250285122`** 成功（日本語316/316、重複なし、Home設定配線、競合マーカー検査）。検証用マーカーは削除済み。work SHA: `ef1648f08d263ca429fb2741f7ba44f8fb6f8c5e`。
+- Readyブランチ: `automation/upstream-v7-ready-20261026-v7-head`。Package・Promote・Private Releaseの最終結果は、ready SHAに紐づくGitHub Actions履歴と `nfb-local-v7.2.7` Releaseを参照する。ビルド成功と実機動作確認は区別する。
 
 ---
 
