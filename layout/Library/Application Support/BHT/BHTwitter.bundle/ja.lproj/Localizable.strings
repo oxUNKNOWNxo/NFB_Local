@@ -61,9 +61,6 @@
 "MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "現在テスト中の実験的な機能を利用できます。";
 
 /* Liquid Glass (experimental) */
-"LIQUID_GLASS_TITLE" = "Liquid Glassを有効にする";
-"LIQUID_GLASS_DETAIL" = "Xの新しいLiquid Glassデザインを有効にします。試験的なデザインのため、不具合が発生する場合があります。";
-"LIQUID_GLASS_RESTART_ALERT_MESSAGE" = "Liquid Glassデザインを反映するにはアプリの再起動が必要です。";
 
 "MODERN_SETTINGS_DEBUG_TITLE" = "デバッグ";
 "MODERN_SETTINGS_DEBUG_SUBTITLE" = "機能が正常に動作しない原因を調査できます。";
@@ -447,13 +444,7 @@
 /* Presets — settings import and export */
 "SETTINGS_EXPORT_TITLE" = "設定のエクスポート";
 "SETTINGS_IMPORT_TITLE" = "設定のインポート";
-"SETTINGS_RESET_TITLE" = "設定のリセット";	
 
-"SETTINGS_RESET_CONFIRM_TITLE" = "すべての設定をリセットしますか？";	
-"SETTINGS_RESET_CONFIRM_MESSAGE" = "これにより、すべての NeoFreeBird の設定がデフォルトに戻ります。";	
-"SETTINGS_RESET_CONFIRM_BUTTON" = "リセット";	
-"SETTINGS_RESET_SUCCESS_TITLE" = "設定がリセットされました";	
-"SETTINGS_RESET_SUCCESS_MESSAGE" = "すべての設定が復元されました。すべての変更を適用するには、アプリを再起動してください。";
 
 "CUSTOM_SEND_SOUND_TITLE" = "送信音をインポート";
 "CUSTOM_SEND_SOUND_DEFAULT" = "カスタムサウンドが選択されていません";
