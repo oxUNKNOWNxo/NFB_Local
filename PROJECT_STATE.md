@@ -7,6 +7,19 @@
 
 ---
 
+## 0. 最新ソース更新（2026-10-27、7.2.8）
+
+- 公式最新release: **v7.2.0**。Twitter本体: **12.33**（いずれも前回から変更なし）。
+- 上流取り込み: `e91bd046e534c280c80009cebf57f558d481d27c` → **`83c76068491433405693b6d914d7ba92ad016396`**（2コミット）。日本語翻訳の追加と、テーマ設定へのカスタムアクセントカラー選択機能の追加。
+- 上流変更ファイル: `ja.lproj/Localizable.strings`、`src/Hooks/HookHelpers.m`、`src/ThemeColor/BHTDimPalette.m`、`src/ThemeColor/ColorSwatchControl.m`、`src/ThemeColor/ColorThemeViewController.m`。Home Timeline / AppLifecycle / Web返信実装に上流差分はなく、Twitter本体版も不変。
+- 3-way同期: `automation/upstream-v7-work-20261027-custom-color`、`Sync upstream source` run `40427271961` 成功、機械的競合なし。
+- 上流の日本語訳9キーはNFB_Localに既に存在したため、同期で重複した9キーを除去して既存ローカル訳を維持。日本語設定キーは **316/316**、重複なしを検証対象とする。英語設定キーの追加はなし。
+- ローカル版: **7.2.8**。既存の `hide_for_you_tab`（おすすめのみ除去、Following/固定・カスタムを維持）、`restore_home_tab_selection`（コールド起動はFollowing、同一セッションのみ復元）、Web返信フォールバック無効化、TrollStore依存先 `@rpath` / install-name / ldid / ZIP整合性処理を維持。
+- 作業開始時のmain SHA: `23d7062175fa9d2f6cf4763963cc1689b581f383`。信頼境界の `.github/workflows/package.yml` / `.github/workflows/promote-verified-update.yml` およびinspect/sync/resolve/validate各Workflowは変更しない。
+- 検証・Package・Promote・Private Releaseの最終結果は、該当するGitHub Actions履歴と `nfb-local-v7.2.8` Releaseを参照する。Package成功は実機動作確認を意味しない。
+
+---
+
 ## 0. 最新ソース更新（2026-10-26、7.2.7）
 
 - 公式release: **v7.2.0**（変化なし）。Twitter本体: **12.33**（変化なし）。
