@@ -16,7 +16,8 @@
 - 上流の日本語訳9キーはNFB_Localに既に存在したため、同期で重複した9キーを除去して既存ローカル訳を維持。日本語設定キーは **316/316**、重複なしを検証対象とする。英語設定キーの追加はなし。
 - ローカル版: **7.2.8**。既存の `hide_for_you_tab`（おすすめのみ除去、Following/固定・カスタムを維持）、`restore_home_tab_selection`（コールド起動はFollowing、同一セッションのみ復元）、Web返信フォールバック無効化、TrollStore依存先 `@rpath` / install-name / ldid / ZIP整合性処理を維持。
 - 作業開始時のmain SHA: `23d7062175fa9d2f6cf4763963cc1689b581f383`。信頼境界の `.github/workflows/package.yml` / `.github/workflows/promote-verified-update.yml` およびinspect/sync/resolve/validate各Workflowは変更しない。
-- 検証・Package・Promote・Private Releaseの最終結果は、該当するGitHub Actions履歴と `nfb-local-v7.2.8` Releaseを参照する。Package成功は実機動作確認を意味しない。
+- `Validate work source` run **`40427375104`** 成功（日本語316/316、重複なし、競合マーカーなし、Home設定・lifecycle配線・ローカル版番号確認）。検証用マーカーは削除済み。
+- Package・Promote・Private Releaseの最終結果は、該当するGitHub Actions履歴と `nfb-local-v7.2.8` Releaseを参照する。Package成功は実機動作確認を意味しない。
 
 ---
 
