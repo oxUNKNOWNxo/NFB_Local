@@ -34,13 +34,10 @@ BOOL IsModuleFooterItem(id item);
 void MarkEmptiedModuleChrome(NSArray* items, NSMutableIndexSet* removed);
 void applySquareAvatarsSetting(void);
 NSString* formatNumberWithSuffix(long long number);
-<<<<<<< /tmp/tmp.232wAbGxoU
-=======
 
 bool NFBLiquidGlassEnabled(void);
 
 // Custom theme color re-apply (Theme.x)
->>>>>>> /tmp/tmp.epih9es7vj
 void applySelectedThemeColor(void);
 void BHTApplyDimToVideoControls(UIView* controlsView);
 
