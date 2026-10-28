@@ -7,6 +7,19 @@
 
 ---
 
+## 0. 最新ソース更新（2026-10-28、7.2.9）
+
+- 公式最新release: **v7.2.0**、ベースTwitter: **12.33**（変更なし）。公式Twitter TrollStore asset: `NeoFreeBird-trollstore-Twitter_7.2.0_12.33.tipa`。
+- 上流取り込み: `83c76068491433405693b6d914d7ba92ad016396` → **`15b0ff7a0a1cbe986a7ade47037a55990cc85233`**（7コミット）。主な変更は広告判定の修正、Liquid Glassの新しいX版（12.38以降）向け条件付き処理、iPad表示、Liquid Glassタブのラベル復元、ロシア語・繁体字中国語翻訳。
+- 上流差分に `HomeBars.x` / `AppLifecycle.x` / `Timeline.x` / `en.lproj` / `ja.lproj` は含まれない。広告フィルタは `Ads.x` に変更があるが、Homeのタブ選択・固定タイムラインのhookに直接変更なし。Twitter本体は12.33のため新規TIPA selector検査は不要。
+- 3-way同期: `automation/upstream-v7-work-20261028-v7-head`、`Sync upstream source` run **40609960164**。競合は `src/Hooks/HookHelpers.h` の追加宣言1件のみ。上流の `NFBLiquidGlassEnabled(void)` 宣言とローカルのHome選択/復元宣言を両方維持して `Resolve reviewed upstream conflicts` run **40610003148** で解決。
+- ローカル版: **7.2.9**。既存の日本語設定、`hide_for_you_tab`（Following/固定・カスタムを維持）、`restore_home_tab_selection`（コールド起動はFollowing、同一セッションのみ復元）、Web返信フォールバック無効化、TrollStore用 `@rpath` / Mach-O install-name / ldid / ZIP検査を維持。
+- 英語・日本語設定の上流差分はなく、既存日本語 **316/316** のキーと訳文を維持。重複キー・未翻訳キー・競合マーカーは `Validate work source` で確認する。
+- 作業開始時main SHA: `7ba245741a39074b7b76f196e0de5ee7cdc84a92`。Private状態を確認。信頼境界の `package.yml` / `promote-verified-update.yml` とinspect/sync/resolve/validate Workflowは変更しない。
+- Package/Promote/Private Releaseの結果は対応するGitHub Actions履歴および `nfb-local-v7.2.9` Releaseを確認する。ビルド成功と実機動作確認は区別する。
+
+---
+
 ## 0. 最新ソース更新（2026-10-27、7.2.8）
 
 - 公式最新release: **v7.2.0**。Twitter本体: **12.33**（いずれも前回から変更なし）。
