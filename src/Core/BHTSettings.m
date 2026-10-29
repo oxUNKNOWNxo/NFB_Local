@@ -319,6 +319,11 @@ static NSDictionary<NSString*, NSDictionary*>* BHTSettingsPages(void) {
                         @"type": @"toggle"
                     },
                     @{
+                        @"key": @"hide_made_on_x",
+                        @"default": @NO,
+                        @"type": @"toggle"
+                    },
+                    @{
                         @"key": @"use_tenor_gifs",
                         @"default": @NO,
                         @"type": @"toggle"
