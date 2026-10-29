@@ -65,11 +65,7 @@
 "MODERN_SETTINGS_DEBUG_TITLE" = "デバッグ";
 "MODERN_SETTINGS_DEBUG_SUBTITLE" = "機能が正常に動作しない原因を調査できます。";
 
-<<<<<<< /tmp/tmp.MlGxz15sBm
 "COOL_KIDS_SECTION_HEADER_TITLE" = "クールな仲間たち";
-=======
-"COOL_KIDS_SECTION_HEADER_TITLE" = "イケてる仲間たち";
->>>>>>> /tmp/tmp.L3mhVixcTs
 "SPECIAL_THANKS_SECTION_HEADER_TITLE" = "特別な感謝";
 "FOLLOW_OFFICIAL_PAGE_SECTION_HEADER_TITLE" = "NeoFreeBirdをフォロー";
 
@@ -104,15 +100,6 @@
 "ALWAYS_OPEN_SAFARI_TITLE" = "外部ブラウザで開く";
 "ALWAYS_OPEN_SAFARI_DETAIL" = "リンクをSafari、またはデフォルトのブラウザで開きます。";
 
-<<<<<<< /tmp/tmp.MlGxz15sBm
-=======
-"BLOCK_LINK_TRACKING_TITLE" = "リンク追跡のブロック";	
-"BLOCK_LINK_TRACKING_DETAIL" = "t.coを経由せず、バックグラウンドでのt.coのリクエストや広告クリックIDなしで、リンクを直接開きます。Xの危険なリンクの警告は表示されなくなります。";
-
-"STRIP_TRACKING_PARAMS_TITLE" = "追跡パラメータの削除";	
-"STRIP_TRACKING_PARAMS_DETAIL" = "開いたリンクからutm_などの追跡タグを取り除きます。";
-
->>>>>>> /tmp/tmp.L3mhVixcTs
 "SHARING_DOMAIN_TITLE" = "共有ドメイン";
 
 /*Tweets*/
@@ -310,13 +297,8 @@
 "BOLD_FONTS_PICKER_OPTION_TITLE" = "太字フォントを選択";
 
 /*Labs*/
-<<<<<<< /tmp/tmp.MlGxz15sBm
 "REPLY_IN_WEBVIEW_TITLE" = "Web返信フォールバック（無効）";
 "REPLY_IN_WEBVIEW_DETAIL" = "X 12.33ではWeb返信が自動操作判定を受ける可能性があるため無効化しています。返信には通常のアプリ内返信画面を使用します。";
-=======
-"REPLY_IN_WEBVIEW_TITLE" = "ウェブビューで返信";
-"REPLY_IN_WEBVIEW_DETAIL" = "返信が送信できない場合の代替手段。アプリ内ではなくx.comで返信します。";
->>>>>>> /tmp/tmp.L3mhVixcTs
 
 "LIQUID_GLASS_TITLE" = "リキッドグラスを有効にする";
 "LIQUID_GLASS_DETAIL" = "Xの新しいリキッドグラスインターフェイスを有効にします。これは実験的な再デザインであり、問題を引き起こす可能性があります。";
