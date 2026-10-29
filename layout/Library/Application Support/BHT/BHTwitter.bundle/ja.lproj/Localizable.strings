@@ -140,6 +140,8 @@
 "HIDE_BOOKMARK_BUTTON_DETAIL" = "ポストに表示されるブックマークボタンを非表示にします。";
 "HIDE_DOWNVOTE_BUTTON_TITLE" = "低評価ボタンを非表示";
 "HIDE_DOWNVOTE_BUTTON_DETAIL" = "ポストに表示される低評価ボタンを非表示にします。";
+"HIDE_MADE_ON_X_TITLE" = "「Made on X」を非表示";
+"HIDE_MADE_ON_X_DETAIL" = "ポストに表示される「Made on X」のラベルを非表示にします。";
 
 "DISABLE_SENSITIVE_TWEET_WARNINGS_TITLE" = "センシティブ警告を非表示";
 
