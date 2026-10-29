@@ -1,9 +1,23 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-10-23 (JST)
+最終更新: 2026-10-29 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+## 0. 最新ソース更新（2026-10-29、7.3.1）
+
+- 公式最新release: **v7.3.0**（2026-10-29 JST公開）、ベースTwitter: **12.38.1**（旧12.33から更新）。公式TwitterブランドTrollStore asset: `NeoFreeBird-trollstore-Twitter_7.3.0_12.38.1.tipa`。
+- 上流取り込み: `15b0ff7a0a1cbe986a7ade47037a55990cc85233` → **`ffb8b9368e270c860e3e7fa196f43e9295a6175b`**（18コミット）。新しい「おすすめ動画」非表示、Liquid Glassのクイック作成非表示、メッセージ・分割表示・フォント・共有等の修正、日本語/各言語翻訳を統合。
+- 作業開始時main SHA: `aafe41801af34c0b70de41d996477785c22a2271`、Private維持。
+- X 12.38.1実バイナリ検査: `automation/inspect-upstream-20261029-v730`、`Inspect upstream Twitter binary` run **40792045731**。Home Timelineクラスと必須21 selector/tokenは**すべてPASS**。最後の検査レポートArtifact uploadだけがActions保存容量制限で失敗（検査結果はrunログで確認可能）。TIPAの取得・展開と実バイナリのselector検査は成功。
+- 3-way同期: `automation/upstream-v7-work-20261029-v730`、`Sync upstream source` run **40792247701**。競合は `control` のローカル版番号と `ja.lproj/Localizable.strings` の既存ローカル訳。旧ローカル訳とWeb返信フォールバック無効化の説明を維持し、`Resolve reviewed upstream conflicts` run **40792315263** で解決。ローカル版は **7.3.1**。
+- 日本語設定: **320/320**、新規4キー（おすすめ動画・クイック作成の各タイトル/説明）を含む。重複・欠落・空欄なし。旧ローカル訳を優先。正式な `Validate work source` の実行結果はActions履歴を確認する。
+- Home実装: 上流 `HomeBars.x` の変更は表記上の空白のみ。12.38.1の必須selectorは全件存在。既存の `hide_for_you_tab`（For Youのみ削除しFollowing/固定・カスタムを維持）、`restore_home_tab_selection`（コールド起動Following、同一セッションだけ復元）、Web返信フォールバック無効化を保持。実機での動作確認は未実施。
+- TrollStore: `package.yml` / `promote-verified-update.yml` とinspect/sync/resolve/validate各Workflowは変更せず、CydiaSubstrate `@rpath`、Mach-O install-name、ldid、ZIP検査、Private Release配布方式を維持。
+- Package/Promote/Private Releaseの結果は `automation/upstream-v7-ready-20261029-v730` のActions履歴と `nfb-local-v7.3.1` Releaseを参照する。ビルド成功と実機動作確認は区別する。
 
 ---
 
