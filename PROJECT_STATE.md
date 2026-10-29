@@ -7,6 +7,19 @@
 
 ---
 
+## 0. 最新ソース更新（2026-10-30、7.3.2）
+
+- 公式最新release: **v7.3.0**（変更なし）、ベースTwitter: **12.38.1**（変更なし）。公式 `v7` SHA: **`734e7e0a16d77787f3e04b7389c8ce06e1c0ef31`**。
+- 取り込み済み上流SHA `ffb8b9368e270c860e3e7fa196f43e9295a6175b` から3コミット。カスタムアクセントカラーと従来型タブバーの修正、Liquid Glass無効時のタブラベル表示修正、「Made on X」ラベル非表示機能。
+- 作業開始時main SHA: `e1f27cc156c400bc5b9f6f887de86ec4192683e2`。Private状態を確認。
+- Workブランチ: `automation/upstream-v7-work-20261030-theme-fixes`。 `Sync upstream source` run **40976312226** 成功。3-way同期競合なし。上流変更は設定、テーマ、タブバー表示、UIラベル関連。 `src/Hooks/HomeBars.x` / `src/Hooks/AppLifecycle.x` に上流差分なし。
+- ローカル版: **7.3.2**。日本語設定 **322/322**（新規「Made on X」2キーを翻訳）。英日キーの一致、重複なし、空欄なしをソースで確認。正式な `check_localization.py ja` と `--values`、`Validate work source` はActions履歴で検証する。
+- ローカル `hide_for_you_tab`、`restore_home_tab_selection`、Web返信フォールバック無効化を維持。Twitter 12.38.1は前回の必須selector検査run **40792045731** で21項目PASS（最終Artifactアップロードのみ容量超過）。今回の上流はHome選択・復元のhook本体を変更しない。タブバーの表示処理は変更されるため、実機でのUI確認は別途必要。
+- `package.yml` / `promote-verified-update.yml` およびinspect/sync/resolve/validateの各Workflowは変更しない。TrollStore用CydiaSubstrate `@rpath`、Mach-O install-name、ldid、ZIP検査、Private Release配布を維持。
+- 検証済みreadyブランチ、Package/Promote run、Private Releaseの最終結果は `automation/upstream-v7-ready-20261030-theme-fixes` と `nfb-local-v7.3.2` のActions/Release履歴を確認する。ビルド成功と実機動作確認は区別する。
+
+---
+
 ## 0. 最新ソース更新（2026-10-29、7.3.1）
 
 - 公式最新release: **v7.3.0**（2026-10-29 JST公開）、ベースTwitter: **12.38.1**（旧12.33から更新）。公式TwitterブランドTrollStore asset: `NeoFreeBird-trollstore-Twitter_7.3.0_12.38.1.tipa`。
