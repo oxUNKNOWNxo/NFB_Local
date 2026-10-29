@@ -1,6 +1,10 @@
 Package: com.nfb.tweak
 Name: NeoFreeBird
+<<<<<<< /tmp/tmp.27EqrUkC1O
 Version: 7.2.9
+=======
+Version: 7.3.0
+>>>>>>> /tmp/tmp.PlwrdvRisg
 Architecture: iphoneos-arm
 Description: A tweak which brings back the old Twitter experience, with the features of X.
 Maintainer: NeoFreeBird
