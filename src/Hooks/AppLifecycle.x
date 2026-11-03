@@ -180,10 +180,6 @@ static void scheduleTestAlertIfNeeded(void) {
 }
 
 - (void)applicationWillResignActive:(__unsafe_unretained id)arg1 {
-    // Stop launch-only Following correction when the user leaves the app.
-    // No previously selected pinned timeline is recorded or restored.
-    stopHomeStartupFollowingOnResignActive();
-
     %orig;
 
     if ([BHTSettings boolForKey:@"padlock"]) {
@@ -203,6 +199,10 @@ static void scheduleTestAlertIfNeeded(void) {
 
 - (void)applicationDidEnterBackground:(__unsafe_unretained id)arg1 {
     %orig;
+
+    // Only a real background transition ends startup correction.
+    // Brief interruptions (e.g. Face ID) must not allow X to restore a pinned list.
+    stopHomeStartupFollowingOnResignActive();
 
     if ([BHTSettings boolForKey:@"padlock"])
         [padlockController pauseAuthentication];
