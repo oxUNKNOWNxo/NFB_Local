@@ -7,6 +7,20 @@
 
 ---
 
+## 0. ローカル修正（2026-11-03、7.3.4）— NeoFreeBird設定欄の復元
+
+- ユーザーがPrivate Release `nfb-local-v7.3.3` / Twitter **12.38.1** に更新後、「設定とプライバシー」からNeoFreeBird設定の行が消えたと報告。実機での修正確認はまだ。
+- `src/Hooks/Settings.x` は7.3.2/7.3.3と本家取り込み済み `v7` で同じblob SHA `22a6b6901b4683d26aaea700fdc3ce512a936b07`。**ローカルの3-way競合解決でこのファイルが上書きされた不具合ではない**。
+- Twitter 12.38.1公式TrollStore TIPAをActionsで抽出・文字列検査。検査run `41576988197` / クラス詳細 `41577709175`。旧 `T1GenericSettingsViewController` は `T1Twitter.framework` に存在、`TFNItemsDataViewController` と `setSections:` / `setSections:restoreScrollPosition:` / `updatedSections:forStyle:` は `XServiceLibraries.framework` 等に存在する。**旧クラスが完全削除されたわけではない**。Swiftの `T1TwitterSwift.GenericSettingsViewController` も文字列確認済み。
+- 原因候補: 設定ルートが初回 `viewWillAppear:` 時にナビゲーションスタックに現れずルートマーカーが付かない、または非同期更新が `updatedSections:forStyle:` を経由せず `setSections:` 系で保存済み行を上書きする。実機イベントログがないため単独原因は未確定。
+- **7.3.4の変更:** `Settings.x` に旧ルートとSwift汎用ルートの限定判定、`viewDidAppear:` での再挿入、`TFNItemsDataViewController` の `setSections:` / `setSections:restoreScrollPosition:` での行維持を追加。関連オブジェクトで重複を防ぎ、設定サブページの挿入を避ける。accountが旧設定クラスのpropertyで取得できない場合はホストのcurrentAccountを使う。
+- 設定画面以外の改修、`hide_for_you_tab`、`restore_home_tab_selection`、Web返信のネイティブ化、TrollStore `@rpath` / install-name補正、日本語設定 **327/327** を維持。変更したファイル: `src/Hooks/Settings.x`、`control`、`PROJECT_STATE.md`、設定hookの静的検査を追加した `validate-work-source.yml`。
+- 公式リリースv7.3.0、ベースTwitter **12.38.1** はそのまま。**この修正版の上流取り込み基準は7.3.3時点の `e6dedd455b10732fa3bf475b495946969be71a91`**。後続の公式 `v7` 更新は定期タスクで別途追従する。
+- 検証ブランチ `automation/upstream-v7-work-20261103-settings-entry`。更新後は検証→ready→Package→Private Release→Promoteの通常経路を利用し、main直接書き込みやPR作成は行わない。
+- 残る必須の実機確認: X設定とプライバシーの最上位にNeoFreeBird行が1個表示されるか、タップで設定が開くか、別サブページには重複表示されないか、一覧の読み直しや再表示後にも維持されるか。
+
+---
+
 ## 0. 最新ソース更新（2026-11-03、7.3.3）
 
 - 公式最新release: **v7.3.0**（変更なし）、ベースTwitter: **12.38.1**（変更なし）。公式 `v7` SHA: **`e6dedd455b10732fa3bf475b495946969be71a91`**。
