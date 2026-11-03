@@ -49,7 +49,7 @@ jobs:
               relative="${target#$APP/}"
               matches=$(strings -a "$target" 2>/dev/null | grep -Ff /tmp/tokens.txt | sort -u | head -n 30 || true)
               if [ -n "$matches" ]; then
-                printf '--- %s ---\n%s\n' "$relative" "$matches"
+                printf '%s\n%s\n' "--- $relative ---" "$matches"
               fi
             fi
           done < <(find "$APP" -type f -print0)
