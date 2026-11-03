@@ -129,6 +129,9 @@ static void scheduleTestAlertIfNeeded(void) {
 
 - (_Bool)application:(__unsafe_unretained UIApplication*)application
     didFinishLaunchingWithOptions:(__unsafe_unretained id)arg2 {
+    // Forget the old saved pinned-list identifier before Twitter initializes
+    // its own home view, rather than trying to undo the restore afterward.
+    prepareHomeTimelineFollowingForColdLaunch();
     _Bool orig = %orig;
 
     [BHTManager cleanCache];
@@ -145,10 +148,6 @@ static void scheduleTestAlertIfNeeded(void) {
 
 - (void)applicationDidBecomeActive:(__unsafe_unretained id)arg1 {
     %orig;
-
-    // Twitter may rewrite the Home segmented-controller selection while becoming
-    // active. Restore NFB_Local's visible-index selection after that work finishes.
-    restoreHomeTimelineSelectionAfterBecomeActive();
 
     applySelectedThemeColor();
     prewarmWebCookiesIfNeeded();
@@ -182,10 +181,6 @@ static void scheduleTestAlertIfNeeded(void) {
 }
 
 - (void)applicationWillResignActive:(__unsafe_unretained id)arg1 {
-    // Capture the actual visible Home tab before Twitter's own resign-active
-    // handling gets a chance to persist/remap its internal index.
-    saveHomeTimelineSelectionBeforeResignActive();
-
     %orig;
 
     if ([BHTSettings boolForKey:@"padlock"]) {
