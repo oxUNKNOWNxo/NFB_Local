@@ -1,1 +1,1 @@
-Validate 7.3.6 Following-only startup, no persisted home selection feature.
+Retry validation 7.3.6: retired restore setting is removed from UI and stale value cleared.
