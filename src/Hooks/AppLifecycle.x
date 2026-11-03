@@ -66,27 +66,9 @@ static void showPadlockOverlay(void) {
 }
 
 static void removePadlockOverlay(void) {
-<<<<<<< /tmp/tmp.HrhP2rMiwi
-    for (UIWindow* w in allActiveWindows()) {
-        NSMutableArray<UIView*>* toRemove = [NSMutableArray array];
-        for (UIView* v in w.subviews) {
-            if (v.tag == PadlockOverlayTag)
-                [toRemove addObject:v];
-        }
-        for (UIView* v in toRemove)
-            [v removeFromSuperview];
-    }
-}
-
-static BOOL padlockAuthenticated = NO;
-
-static BOOL isAuthenticated(void) {
-    return padlockAuthenticated;
-=======
     [padlockController pauseAuthentication];
     [padlockController.view removeFromSuperview];
     padlockController = nil;
->>>>>>> /tmp/tmp.oV7DLAZeCT
 }
 
 static NSString* testAlertVersion(void) {
@@ -202,10 +184,6 @@ static void scheduleTestAlertIfNeeded(void) {
     %orig;
 
     if ([BHTSettings boolForKey:@"padlock"]) {
-<<<<<<< /tmp/tmp.HrhP2rMiwi
-        showPadlockOverlay();
-        setAuthenticated(NO);
-=======
         // A visible lock view already covers the app during Face ID's own
         // temporary inactive transition. Only add one when leaving unlocked.
         if (padlockAuthenticated || !padlockController.view.window) {
@@ -213,7 +191,6 @@ static void scheduleTestAlertIfNeeded(void) {
             [padlockController pauseAuthentication];
         }
         padlockAuthenticated = NO;
->>>>>>> /tmp/tmp.oV7DLAZeCT
     }
 
     if ([BHTSettings boolForKey:@"flex_twitter"]) {

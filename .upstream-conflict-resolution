@@ -1,3 +1,0 @@
-VERSION=7.3.3
-control=ours
-src/Hooks/AppLifecycle.x=theirs

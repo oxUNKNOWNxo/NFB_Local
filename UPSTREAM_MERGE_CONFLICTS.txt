@@ -1,2 +1,0 @@
-control
-src/Hooks/AppLifecycle.x
