@@ -94,6 +94,11 @@ static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex
     }
 }
 
+void stopHomeStartupFollowingOnResignActive(void) {
+    HomeStartupFollowingPending = NO;
+    HomeStartupInteractionEpoch++;
+}
+
 void applyHideForYouSetting(void) {
     id container = ActiveHomeTimelineContainer;
     if (HideForYouEnabled()) {
