@@ -1,0 +1,61 @@
+name: Diagnose X 12.38.1 settings entry compatibility
+
+on:
+  push:
+    branches:
+      - 'automation/diagnose-settings-20261103'
+    paths:
+      - '.github/workflows/diagnose-settings.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: macos-latest
+    steps:
+      - name: Inspect official Twitter 12.38.1 binary selectors
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --retry-delay 2 \
+            'https://github.com/NeoFreeBird/app/releases/download/v7.3.0/NeoFreeBird-trollstore-Twitter_7.3.0_12.38.1.tipa' \
+            -o /tmp/xbase.tipa
+          mkdir -p /tmp/xbase
+          unzip -q /tmp/xbase.tipa -d /tmp/xbase
+          APP=$(find /tmp/xbase/Payload -maxdepth 2 -type d -name '*.app' | head -n1)
+          test -n "$APP"
+          MAIN_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          MAIN="$APP/$MAIN_NAME"
+          printf 'App: %s\nMain: %s\n' "$APP" "$MAIN"
+
+          cat >/tmp/tokens.txt <<'EOF'
+          T1GenericSettingsViewController
+          T1SettingsViewController
+          TFNItemsDataViewController
+          TFNSettingsNavigationItem
+          updatedSections:forStyle:
+          setSections:
+          viewWillAppear:
+          SettingsViewController
+          SettingsRootViewController
+          SettingsAndPrivacy
+          SettingsNavigationItem
+          EOF
+          sed -i '' 's/^          //' /tmp/tokens.txt
+
+          echo '=== Tokens found in Mach-O binaries ==='
+          while IFS= read -r -d '' target; do
+            if file "$target" | grep -q 'Mach-O'; then
+              relative="${target#$APP/}"
+              matches=$(strings -a "$target" 2>/dev/null | grep -Ff /tmp/tokens.txt | sort -u | head -n 30 || true)
+              if [ -n "$matches" ]; then
+                printf '--- %s ---\n%s\n' "$relative" "$matches"
+              fi
+            fi
+          done < <(find "$APP" -type f -print0)
+
+          echo '=== Settings class / selector symbol candidates in main ==='
+          strings -a "$MAIN" | grep -E '(T1|TFN|X).*(Settings|Preferences).*ViewController|updatedSections:forStyle:|setSections:|settingsAndPrivacy|SettingsAndPrivacy' | sort -u | head -n 140 || true
+
+          echo '=== ObjC class definitions in main ==='
+          nm -m "$MAIN" 2>/dev/null | grep -E 'OBJC_CLASS_\$_(T1GenericSettingsViewController|T1SettingsViewController|TFNItemsDataViewController|TFNSettingsNavigationItem)' | head -n 30 || true
