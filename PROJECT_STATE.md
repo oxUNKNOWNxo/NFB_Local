@@ -7,6 +7,21 @@
 
 ---
 
+## 0. ローカル修正（2026-11-03、7.3.6）— 起動時は常にフォロー中／リスト位置復元を撤去
+
+- ユーザー実機で7.3.5でもコールド起動時に2つ目の固定リストが選択される場合がある。従来の `restore_home_tab_selection` 機能の**全面撤去**を指定された。
+- 設定UI: `TimelinesSettingsViewController.m` から「選択したホームタブを復元」スイッチ、英日直書き説明、復元スイッチ専用イベント処理をすべて削除。従来の「おすすめを非表示」スイッチと固定リスト表示機能は維持。
+- 起動・復元API: `HomeBars.x` から `HomeSessionVisibleIndex` / `RestoreHomeTabSelectionEnabled` / `applyRestoreHomeTabSelectionSetting` / `saveHomeTimelineSelectionBeforeResignActive` / `restoreHomeTimelineSelectionAfterBecomeActive` を撤去。`AppLifecycle.x` からアクティブ復帰／離脱時の保存・復元フック呼び出しを削除。`HookHelpers.h` の宣言も削除。
+- 新しい `prepareHomeTimelineFollowingForColdLaunch()` を `T1AppDelegate application:didFinishLaunchingWithOptions:` の**本家 `%orig` より前**で実行。`THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier` と旧独自設定 `restore_home_tab_selection` を削除し、X本体が保存済みの固定リストを読めないようにする。
+- `HomeBars.x` は起動時の表示を「フォロー中」に固定。おすすめ非表示時の可視index **0**、通常表示時の可視index **1**を選択。`viewDidAppear` 後に加え、後から来る固定リスト一覧の各更新で選択が異なる場合のみ再選択し、冗長な再読み込みを抑制。手動タブタップ後はこれ以上自動変更しない（バックグラウンド復帰時に独自のリスト位置復元も行わない）。
+- 今回の「固定」は**初期表示の固定**であって固定リストの利用禁止ではない。ユーザーは起動後に固定・カスタムリストへ切り替え可能。実機動作は未検証。
+- 上流Release **v7.3.0**、ベースTwitter **12.38.1**、上流取り込み済みSHA **`e6dedd455b10732fa3bf475b495946969be71a91`**。ローカル版 **7.3.6**。
+- 本家ロゴ長押しの設定入口、`hide_for_you_tab` の独自タブ非表示、Privateビルドのみの公式配布元注意書き抑止、327/327件の日本語、ネイティブ返信、TrollStore互換再梱包・Private Release配布は維持。
+- Work: `automation/upstream-v7-work-20261103-following-only`。Package/Promoteの最終結果はActionsの実行履歴を参照する。ビルド成功と実機検証を区別する。
+- 今後の上流同期・自動更新では復元スイッチやLifecycleの旧保存復元関数を復活させない。
+
+---
+
 ## 0. ローカル修正（2026-11-03、7.3.5）— 起動時タブと個人用TIPAの案内
 
 - 本家 `NeoFreeBird/app` `v7` の `README.md` は、独自設定への入口を**ホームのTwitter/Xロゴ長押し**と明記し、「設定とプライバシー」にNeoFreeBird行はないと説明している。ユーザーはロゴ長押しで設定を開けることを実機確認済み。したがって7.3.4で試験的に追加した設定ルート/非同期sections再構築フックは**本家 `src/Hooks/Settings.x` と同一内容へ差し戻した**（blob `22a6b6901b4683d26aaea700fdc3ce512a936b07`）。正常なロゴ長押しを維持。
