@@ -7,6 +7,18 @@
 
 ---
 
+## 0. ローカル修正（2026-11-03、7.3.5）— 起動時タブと個人用TIPAの案内
+
+- 本家 `NeoFreeBird/app` `v7` の `README.md` は、独自設定への入口を**ホームのTwitter/Xロゴ長押し**と明記し、「設定とプライバシー」にNeoFreeBird行はないと説明している。ユーザーはロゴ長押しで設定を開けることを実機確認済み。したがって7.3.4で試験的に追加した設定ルート/非同期sections再構築フックは**本家 `src/Hooks/Settings.x` と同一内容へ差し戻した**（blob `22a6b6901b4683d26aaea700fdc3ce512a936b07`）。正常なロゴ長押しを維持。
+- ユーザー実機では、アプリを完全起動した際に「フォロー中」ではなく2つ目の固定リストが選ばれる場合がある。12.38.1で固定タイムライン一覧が非同期に公開され、最初の `viewDidAppear` での可視index 0指定を後から上書きする可能性がある（直接的な実機イベントログは未取得）。
+- `src/Hooks/HomeBars.x`: 初回ホーム表示後、最初の非同期固定リストモデル更新があった際に**可視index 0（フォロー中）を再選択**するよう変更。同一セッション中の明示的なタブタップとバックグラウンド復帰は優先し、最初の表示直後の450ms再選択も加える。従来の `hide_for_you_tab` の可視/ソースindex変換と `restore_home_tab_selection` は維持。起動時の実機改善は未検証。
+- `src/Hooks/AppLifecycle.x`: 本家の `GITHUB_DOWNLOAD_WARNING_TITLE` / `GITHUB_DOWNLOAD_WARNING_MESSAGE` 表示は `scheduleTestAlertIfNeeded()` によるもの。警告機構自体は残し、**ローカルPrivateビルド**を表す `NFB_LOCAL_PRIVATE_BUILD=1`（MakefileのCFLAGSで定義）時だけ呼び出さない。Xの投稿・認証等の警告を広範囲に無効化する変更ではない。
+- ローカル版 **7.3.5**、ベースTwitter **12.38.1**、公式最新release **v7.3.0**。今回の変更はローカル固有修正であり、取り込み済み上流基準SHA `e6dedd455b10732fa3bf475b495946969be71a91` を進めない。後続上流は定期タスクで別途確認する。
+- 既存独自改良の日本語設定327/327、`hide_for_you_tab`、`restore_home_tab_selection`、ネイティブ返信、TrollStore依存先修正/署名/Private Release配布を維持する。
+- 検証対象: `automation/upstream-v7-work-20261103-settings-v735`。パッケージおよびPromote結果はGitHub Actionsの該当runにより確認。**端末での起動時選択と警告非表示はビルド成功とは別に実機確認が必要**。
+
+---
+
 ## 0. ローカル修正（2026-11-03、7.3.4）— NeoFreeBird設定欄の復元
 
 - ユーザーがPrivate Release `nfb-local-v7.3.3` / Twitter **12.38.1** に更新後、「設定とプライバシー」からNeoFreeBird設定の行が消えたと報告。実機での修正確認はまだ。
