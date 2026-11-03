@@ -1,9 +1,22 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-10-29 (JST)
+最終更新: 2026-11-03 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+## 0. 最新ソース更新（2026-11-03、7.3.3）
+
+- 公式最新release: **v7.3.0**（変更なし）、ベースTwitter: **12.38.1**（変更なし）。公式 `v7` SHA: **`e6dedd455b10732fa3bf475b495946969be71a91`**。
+- 取り込み済み上流SHA `734e7e0a16d77787f3e04b7389c8ce06e1c0ef31` から **17コミット**。認証/PadlockとAppLifecycleの再構成、ホームへのフォーカス制御、ネイティブタブの調整、テーマ/メディア改善、非公式ダウンロード警告、翻訳者欄、iPad分割表示の説明、多言語翻訳、iOS 15最小要件を含む。
+- 作業開始時 `main`: `9462102defe85d271700a0e64c6151a1a089c057`、リポジトリPrivateを確認。
+- Workブランチ: `automation/upstream-v7-work-20261103-v7-head`。Sync upstream source run **41549827457** は2ファイルの競合を検出し作業ツリーへ保存（`control`、`src/Hooks/AppLifecycle.x`）。`Resolve reviewed upstream conflicts` run **41549915664** は成功。版番号は **7.3.3**。AppLifecycleの競合領域は新しい上流Padlock実装を採用し、競合領域外に保持されていたローカルの `saveHomeTimelineSelectionBeforeResignActive` / `restoreHomeTimelineSelectionAfterBecomeActive` 呼び出しを維持。
+- 上流 `src/Hooks/HomeBars.x` に差分なし。Twitter本体版も12.38.1のままで、以前の実バイナリ必須21項目PASS（run **40792045731**）を参照。AppLifecycle変更後のHome復元・Padlock動作は実機での追加確認が必要。
+- 日本語設定: **327/327**。追加5キー（翻訳者見出し、iPad分割表示2、GitHubダウンロード警告2）を日本語化。英日キー一致、重複・空欄なしをソースで確認。公式 `check_localization.py ja` / `--values` とValidate work sourceをActionsで検証する。
+- ローカル `hide_for_you_tab`、`restore_home_tab_selection`、Web返信フォールバック無効化を維持。TrollStore用CydiaSubstrate `@rpath`、Mach-O install-name、ldid、ZIP検査、Private Release配布を維持。
+- `.github/workflows/package.yml` / `.github/workflows/promote-verified-update.yml` とinspect/sync/resolve/validate Workflowは変更しない。Private Release/Package/Promote結果は完了後に記録・確認する。ビルド成功と実機動作確認は区別する。
 
 ---
 
