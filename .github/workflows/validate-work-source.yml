@@ -58,3 +58,12 @@ jobs:
           grep -Fq 'saveHomeTimelineSelectionBeforeResignActive' src/Hooks/AppLifecycle.x
           grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
           grep -Eq 'Version: [[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+' control
+
+      - name: Validate NeoFreeBird settings entry compatibility
+        run: |
+          set -euo pipefail
+          grep -Fq 'T1GenericSettingsViewController' src/Hooks/Settings.x
+          grep -Fq 'T1TwitterSwift.GenericSettingsViewController' src/Hooks/Settings.x
+          grep -Fq 'setSections:(NSArray*)sections restoreScrollPosition:' src/Hooks/Settings.x
+          grep -Fq 'sectionsWithNeoFreeBirdEntry(self, sections)' src/Hooks/Settings.x
+          grep -Fq 'insertNeoFreeBirdSettingsIfRoot(self)' src/Hooks/Settings.x
