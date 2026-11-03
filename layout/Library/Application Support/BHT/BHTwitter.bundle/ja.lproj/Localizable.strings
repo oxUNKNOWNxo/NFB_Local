@@ -505,3 +505,10 @@
 "POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リポスト: %lld";
 "RESTORE_TWEET_LABELS_TITLE" = "投稿元ラベルを表示";
 "RESTORE_TWEET_LABELS_DETAIL" = "ポストがどのクライアントから投稿されたかを表示します。";
+
+/* v7 upstream settings and safety notice (2026-11-03) */
+"TRANSLATOR_PAGE_SECTION_HEADER_TITLE" = "翻訳者";
+"IPAD_SPLIT_VIEW_TITLE" = "iPadの分割表示を有効にする";
+"IPAD_SPLIT_VIEW_DETAIL" = "iPad（およびiPhone Duo）でXを分割表示できます。片側でポストを開き、もう片側でタイムラインを表示できます。";
+"GITHUB_DOWNLOAD_WARNING_TITLE" = "ようこそ！";
+"GITHUB_DOWNLOAD_WARNING_MESSAGE" = "NeoFreeBirdは公式GitHubからインストールしてください。非公式のIPAで発生した問題には対応できず、悪意のあるコードが含まれていないかも確認できません。ご質問がある場合は、GitHubでIssueを作成してください。";
