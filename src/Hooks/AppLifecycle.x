@@ -173,7 +173,12 @@ static void scheduleTestAlertIfNeeded(void) {
         removePadlockOverlay();
     }
 
+    // The upstream warning is important for public distribution. This
+    // private, personally modified NFB_Local build deliberately suppresses
+    // only that download-origin reminder; other X/NFB safety warnings remain.
+#if !defined(NFB_LOCAL_PRIVATE_BUILD)
     scheduleTestAlertIfNeeded();
+#endif
 }
 
 - (void)applicationWillResignActive:(__unsafe_unretained id)arg1 {
