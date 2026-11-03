@@ -14,7 +14,7 @@
 - 作業開始時 `main`: `9462102defe85d271700a0e64c6151a1a089c057`、リポジトリPrivateを確認。
 - Workブランチ: `automation/upstream-v7-work-20261103-v7-head`。Sync upstream source run **41549827457** は2ファイルの競合を検出し作業ツリーへ保存（`control`、`src/Hooks/AppLifecycle.x`）。`Resolve reviewed upstream conflicts` run **41549915664** は成功。版番号は **7.3.3**。AppLifecycleの競合領域は新しい上流Padlock実装を採用し、競合領域外に保持されていたローカルの `saveHomeTimelineSelectionBeforeResignActive` / `restoreHomeTimelineSelectionAfterBecomeActive` 呼び出しを維持。
 - 上流 `src/Hooks/HomeBars.x` に差分なし。Twitter本体版も12.38.1のままで、以前の実バイナリ必須21項目PASS（run **40792045731**）を参照。AppLifecycle変更後のHome復元・Padlock動作は実機での追加確認が必要。
-- 日本語設定: **327/327**。追加5キー（翻訳者見出し、iPad分割表示2、GitHubダウンロード警告2）を日本語化。英日キー一致、重複・空欄なしをソースで確認。公式 `check_localization.py ja` / `--values` とValidate work sourceをActionsで検証する。
+- 日本語設定: **327/327**。追加5キー（翻訳者見出し、iPad分割表示2、GitHubダウンロード警告2）を日本語化。英日キー一致、重複・空欄なしをソースで確認。公式 `check_localization.py ja` / `--values`、重複キー検査、Home lifecycle配線、競合マーカー検査は **Validate work source run 41550068597** で成功。
 - ローカル `hide_for_you_tab`、`restore_home_tab_selection`、Web返信フォールバック無効化を維持。TrollStore用CydiaSubstrate `@rpath`、Mach-O install-name、ldid、ZIP検査、Private Release配布を維持。
 - `.github/workflows/package.yml` / `.github/workflows/promote-verified-update.yml` とinspect/sync/resolve/validate Workflowは変更しない。Private Release/Package/Promote結果は完了後に記録・確認する。ビルド成功と実機動作確認は区別する。
 
