@@ -59,11 +59,13 @@ jobs:
           grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
           grep -Eq 'Version: [[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+' control
 
-      - name: Validate NeoFreeBird settings entry compatibility
+      - name: Validate startup Following and private-build warning handling
         run: |
           set -euo pipefail
-          grep -Fq 'T1GenericSettingsViewController' src/Hooks/Settings.x
-          grep -Fq 'T1TwitterSwift.GenericSettingsViewController' src/Hooks/Settings.x
-          grep -Fq 'setSections:(NSArray*)sections restoreScrollPosition:' src/Hooks/Settings.x
-          grep -Fq 'sectionsWithNeoFreeBirdEntry(self, sections)' src/Hooks/Settings.x
-          grep -Fq 'insertNeoFreeBirdSettingsIfRoot(self)' src/Hooks/Settings.x
+          grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/Settings.x
+          grep -Fq 'HomeColdLaunchAwaitingPinnedRefresh' src/Hooks/HomeBars.x
+          grep -Fq 'HomeColdLaunchUserSelectionEpoch' src/Hooks/HomeBars.x
+          grep -Fq 'ReloadHomeTimelineTabsAtIndex(strongSelf, 0)' src/Hooks/HomeBars.x
+          grep -Fq 'NFB_LOCAL_PRIVATE_BUILD=1' Makefile
+          grep -Fq '#if !defined(NFB_LOCAL_PRIVATE_BUILD)' src/Hooks/AppLifecycle.x
+          grep -Fq 'scheduleTestAlertIfNeeded();' src/Hooks/AppLifecycle.x
