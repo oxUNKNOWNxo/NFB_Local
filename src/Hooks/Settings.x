@@ -12,23 +12,8 @@ static const void* SettingsEntryKey = &SettingsEntryKey;
 static const void* SettingsRootKey = &SettingsRootKey;
 
 static BOOL isSettingsClass(UIViewController* viewController) {
-    if (!viewController ||
-        ![viewController isKindOfClass:objc_getClass("TFNItemsDataViewController")]) {
-        return NO;
-    }
-
-    if ([viewController isKindOfClass:objc_getClass("T1GenericSettingsViewController")] ||
-        [viewController isKindOfClass:objc_getClass("T1SettingsViewController")]) {
-        return YES;
-    }
-
-    // X 12.38.1 also ships Swift-based settings controllers. Recognize only
-    // generic settings roots, not Account/Privacy/etc. settings sub-pages.
-    NSString* name = NSStringFromClass([viewController class]);
-    return [name isEqualToString:@"T1TwitterSwift.GenericSettingsViewController"] ||
-           [name isEqualToString:@"T1TwitterSwift.SettingsViewController"] ||
-           [name isEqualToString:@"GenericSettingsViewController"] ||
-           [name isEqualToString:@"SettingsViewController"];
+    return [viewController isKindOfClass:objc_getClass("T1GenericSettingsViewController")] ||
+           [viewController isKindOfClass:objc_getClass("T1SettingsViewController")];
 }
 
 // The generic controller backs the root and every sub-page alike, so the root is
@@ -80,19 +65,7 @@ static TFNSettingsNavigationItem* makeNeoFreeBirdSettingsItem(
                                                 fitsSize:CGSizeMake(20, 20)
                                                fillColor:iconColor];
 
-    TFNTwitterAccount* account = nil;
-    if ([settingsVC respondsToSelector:@selector(account)]) {
-        account = ((id (*)(id, SEL))objc_msgSend)(settingsVC, @selector(account));
-    }
-    if (!account) {
-        Class hostClass = objc_getClass("T1HostViewController");
-        if ([hostClass respondsToSelector:@selector(sharedHostViewController)]) {
-            id host = [hostClass sharedHostViewController];
-            if ([host respondsToSelector:@selector(currentAccount)]) {
-                account = [host currentAccount];
-            }
-        }
-    }
+    TFNTwitterAccount* account = [(T1GenericSettingsViewController*)settingsVC account];
     TFNSettingsNavigationItem* bhtwitter = [[objc_getClass("TFNSettingsNavigationItem") alloc]
             initWithTitle:[[BHTBundle sharedBundle] localizedStringForKey:@"NFB_SETTINGS_TITLE"]
                    detail:[[BHTBundle sharedBundle] localizedStringForKey:@"NFB_SETTINGS_DETAIL"]
@@ -157,10 +130,6 @@ static NSArray* sectionsWithNeoFreeBirdEntry(TFNItemsDataViewController* setting
     %orig;
     insertNeoFreeBirdSettingsIfRoot(self);
 }
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    insertNeoFreeBirdSettingsIfRoot(self);
-}
 %end
 
 %hook T1SettingsViewController
@@ -168,39 +137,15 @@ static NSArray* sectionsWithNeoFreeBirdEntry(TFNItemsDataViewController* setting
     %orig;
     insertNeoFreeBirdSettingsIfRoot(self);
 }
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    insertNeoFreeBirdSettingsIfRoot(self);
-}
 %end
 
-// On X 12.38.1 the settings data source can be replaced asynchronously using
-// setSections: or setSections:restoreScrollPosition: without going through
-// updatedSections:forStyle:. Hook all three to keep our entry persistent.
+// Every sections rebuild runs through this transform right before setSections:,
+// so hooking it on the base class covers both settings roots.
 %hook TFNItemsDataViewController
-
-- (void)viewDidAppear:(BOOL)animated {
-    %orig;
-    // On newer settings navigation stacks the controller can be absent from
-    // viewControllers during viewWillAppear; retry after it becomes visible.
-    if (isSettingsClass(self)) {
-        insertNeoFreeBirdSettingsIfRoot(self);
-    }
-}
-
-- (void)setSections:(NSArray*)sections {
-    %orig(sectionsWithNeoFreeBirdEntry(self, sections));
-}
-
-- (void)setSections:(NSArray*)sections restoreScrollPosition:(BOOL)restore {
-    %orig(sectionsWithNeoFreeBirdEntry(self, sections), restore);
-}
-
 - (NSArray*)updatedSections:(NSArray*)sections forStyle:(NSInteger)style {
     NSArray* updatedSections = %orig;
     return sectionsWithNeoFreeBirdEntry(self, updatedSections);
 }
-
 %end
 
 // MARK: - NeoFreeBird settings gesture
