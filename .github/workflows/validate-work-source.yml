@@ -51,20 +51,28 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq '@"key": @"hide_for_you_tab"' src/Core/BHTSettings.m
-          grep -Fq '@"restore_home_tab_selection"' src/Settings/Pages/TimelinesSettingsViewController.m
+          if grep -R -F -n 'restore_home_tab_selection' src; then
+            echo 'Obsolete restore setting remains in source.' >&2
+            exit 1
+          fi
+          if grep -R -E -n '(saveHomeTimelineSelectionBeforeResignActive|restoreHomeTimelineSelectionAfterBecomeActive|applyRestoreHomeTabSelectionSetting)' src; then
+            echo 'Obsolete tab-position persistence API remains.' >&2
+            exit 1
+          fi
+          grep -Fq 'HomeStartupFollowingPending' src/Hooks/HomeBars.x
+          grep -Fq 'HomeStartupInteractionEpoch' src/Hooks/HomeBars.x
+          grep -Fq 'stopHomeStartupFollowingOnResignActive' src/Hooks/AppLifecycle.x
           grep -Fq 'numberOfTabsIn:' src/Hooks/HomeBars.x
           grep -Fq 'reloadDataWithSelectingIndex:' src/Hooks/HomeBars.x
           grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars.x
-          grep -Fq 'saveHomeTimelineSelectionBeforeResignActive' src/Hooks/AppLifecycle.x
-          grep -Fq 'restoreHomeTimelineSelectionAfterBecomeActive' src/Hooks/AppLifecycle.x
           grep -Eq 'Version: [[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+' control
 
       - name: Validate startup Following and private-build warning handling
         run: |
           set -euo pipefail
           grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/Settings.x
-          grep -Fq 'HomeColdLaunchAwaitingPinnedRefresh' src/Hooks/HomeBars.x
-          grep -Fq 'HomeColdLaunchUserSelectionEpoch' src/Hooks/HomeBars.x
+          grep -Fq 'HomeStartupFollowingPending' src/Hooks/HomeBars.x
+          grep -Fq 'HomeStartupInteractionEpoch' src/Hooks/HomeBars.x
           grep -Fq 'ReloadHomeTimelineTabsAtIndex(strongSelf, 0)' src/Hooks/HomeBars.x
           grep -Fq 'NFB_LOCAL_PRIVATE_BUILD=1' Makefile
           grep -Fq '#if !defined(NFB_LOCAL_PRIVATE_BUILD)' src/Hooks/AppLifecycle.x
