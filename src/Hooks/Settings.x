@@ -157,10 +157,18 @@ static NSArray* sectionsWithNeoFreeBirdEntry(TFNItemsDataViewController* setting
     %orig;
     insertNeoFreeBirdSettingsIfRoot(self);
 }
+- (void)viewDidAppear:(BOOL)animated {
+    %orig;
+    insertNeoFreeBirdSettingsIfRoot(self);
+}
 %end
 
 %hook T1SettingsViewController
 - (void)viewWillAppear:(BOOL)animated {
+    %orig;
+    insertNeoFreeBirdSettingsIfRoot(self);
+}
+- (void)viewDidAppear:(BOOL)animated {
     %orig;
     insertNeoFreeBirdSettingsIfRoot(self);
 }
