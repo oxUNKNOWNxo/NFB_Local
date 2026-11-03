@@ -19,6 +19,7 @@ static NSString* const HomeTimelineTabSelectionKey =
 // tap, so later asynchronous pinned-list snapshots cannot override Following.
 static BOOL HomeColdLaunchFollowingPending = YES;
 static BOOL HomeColdLaunchSelectionApplied = NO;
+static BOOL HomeColdLaunchRepairScheduled = NO;
 static NSUInteger HomeColdLaunchUserSelectionEpoch = 0;
 
 static BOOL HideForYouEnabled(void) {
@@ -36,6 +37,7 @@ void prepareHomeTimelineFollowingForColdLaunch(void) {
     [defaults removeObjectForKey:@"restore_home_tab_selection"];
     HomeColdLaunchFollowingPending = YES;
     HomeColdLaunchSelectionApplied = NO;
+    HomeColdLaunchRepairScheduled = NO;
     HomeColdLaunchUserSelectionEpoch = 0;
 }
 
@@ -80,6 +82,16 @@ static NSInteger ValidHomeVisibleIndex(id container,
     }
 
     return index;
+}
+
+static BOOL HomeFollowingIsCurrentlyVisible(id container) {
+    id segmented = HomeSegmentedController(container);
+    if (!segmented || ![segmented respondsToSelector:@selector(currentIndex)]) {
+        return NO;
+    }
+    NSInteger index = ((NSInteger (*)(id, SEL))objc_msgSend)(
+        segmented, @selector(currentIndex));
+    return index == HomeFollowingVisibleIndex();
 }
 
 static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex) {
@@ -321,17 +333,22 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
     // A later asynchronous pinned-list snapshot may restore a pinned tab.
     // Repair on EVERY such update until the first explicit user tab tap.
     if (HomeColdLaunchFollowingPending && HomeColdLaunchSelectionApplied &&
-        self == ActiveHomeTimelineContainer) {
+        !HomeColdLaunchRepairScheduled && self == ActiveHomeTimelineContainer) {
+        HomeColdLaunchRepairScheduled = YES;
         NSUInteger epoch = HomeColdLaunchUserSelectionEpoch;
         __weak id weakSelf = self;
         dispatch_async(dispatch_get_main_queue(), ^{
             id strongSelf = weakSelf;
             if (HomeColdLaunchFollowingPending &&
                 epoch == HomeColdLaunchUserSelectionEpoch &&
-                strongSelf && strongSelf == ActiveHomeTimelineContainer) {
+                strongSelf && strongSelf == ActiveHomeTimelineContainer &&
+                !HomeFollowingIsCurrentlyVisible(strongSelf)) {
                 ClearHiddenHomeSelection();
                 ReloadHomeTimelineTabsAtIndex(strongSelf, HomeFollowingVisibleIndex());
             }
+            // Do not recursively schedule repairs from an update emitted by
+            // reloadDataWithSelectingIndex: itself.
+            HomeColdLaunchRepairScheduled = NO;
         });
     }
 }
