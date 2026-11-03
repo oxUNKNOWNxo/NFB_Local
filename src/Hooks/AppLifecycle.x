@@ -132,6 +132,8 @@ static void scheduleTestAlertIfNeeded(void) {
     _Bool orig = %orig;
 
     [BHTManager cleanCache];
+    // Retire the former optional tab-position restoration preference.
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"restore_home_tab_selection"];
     if ([BHTSettings boolForKey:@"flex_twitter"]) {
         [[%c(FLEXManager) sharedManager] showExplorer];
     }
@@ -145,10 +147,6 @@ static void scheduleTestAlertIfNeeded(void) {
 
 - (void)applicationDidBecomeActive:(__unsafe_unretained id)arg1 {
     %orig;
-
-    // Twitter may rewrite the Home segmented-controller selection while becoming
-    // active. Restore NFB_Local's visible-index selection after that work finishes.
-    restoreHomeTimelineSelectionAfterBecomeActive();
 
     applySelectedThemeColor();
     prewarmWebCookiesIfNeeded();
@@ -182,9 +180,9 @@ static void scheduleTestAlertIfNeeded(void) {
 }
 
 - (void)applicationWillResignActive:(__unsafe_unretained id)arg1 {
-    // Capture the actual visible Home tab before Twitter's own resign-active
-    // handling gets a chance to persist/remap its internal index.
-    saveHomeTimelineSelectionBeforeResignActive();
+    // Stop launch-only Following correction when the user leaves the app.
+    // No previously selected pinned timeline is recorded or restored.
+    stopHomeStartupFollowingOnResignActive();
 
     %orig;
 
