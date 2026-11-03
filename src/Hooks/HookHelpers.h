@@ -47,9 +47,7 @@ void attachNeoFreeBirdSettingsGesture(UIViewController* home);
 
 // Live pinned-tabs refresh when the hide setting is toggled (Timeline.x)
 void applyHideCustomTimelinesSetting(void);
-void applyRestoreHomeTabSelectionSetting(void);
-void saveHomeTimelineSelectionBeforeResignActive(void);
-void restoreHomeTimelineSelectionAfterBecomeActive(void);
+void prepareHomeTimelineFollowingForColdLaunch(void);
 BOOL panelIsGenuinelyAvailable(long long panelID);
 void prewarmWebCookiesIfNeeded(void);
 void maybeHandleHarvestWebView(__unsafe_unretained id webViewController);
