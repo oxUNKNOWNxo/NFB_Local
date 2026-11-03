@@ -14,26 +14,15 @@ static char HomeInitialSelectionFixedKey;
 static NSString* const HomeTimelineTabSelectionKey =
     @"THFHomeTimelineContainerViewController.lastSelectedTimelineTabIdentifier";
 
-// Session-only by design. A cold launch must always start on Following; only a
-// background/foreground transition inside the same process may restore a pinned
-// list, and only when the user enables restore_home_tab_selection.
-static NSInteger HomeSessionVisibleIndex = 0;
-static BOOL HomeColdLaunchSelectionApplied = NO;
-
-// The 12.38.1 pinned timelines repository can publish its first list after the
-// home view has appeared, causing the app to reselect a pinned list. Keep the
-// one-time cold-start Following selection pending until that first real pinned
-// list is published. Never override an explicit tab tap or a later return from
-// the background.
-static BOOL HomeColdLaunchAwaitingPinnedRefresh = NO;
-static NSUInteger HomeColdLaunchUserSelectionEpoch = 0;
+// No tab-position restore feature: every process starts on visible tab 0
+// (Following when For You is hidden). X can publish pinned lists repeatedly
+// after Home first appears; keep startup correction active until the user
+// explicitly chooses a tab or the app becomes inactive.
+static BOOL HomeStartupFollowingPending = YES;
+static NSUInteger HomeStartupInteractionEpoch = 0;
 
 static BOOL HideForYouEnabled(void) {
     return [BHTSettings boolForKey:@"hide_for_you_tab"];
-}
-
-static BOOL RestoreHomeTabSelectionEnabled(void) {
-    return [BHTSettings boolForKey:@"restore_home_tab_selection"];
 }
 
 static NSInteger HomeSourceTabIndex(NSInteger visibleIndex) {
@@ -79,18 +68,6 @@ static NSInteger ValidHomeVisibleIndex(id container,
     return index;
 }
 
-static NSInteger CurrentHomeVisibleIndex(id container) {
-    id segmentedController = HomeSegmentedController(container);
-    if (!segmentedController ||
-        ![segmentedController respondsToSelector:@selector(currentIndex)]) {
-        return 0;
-    }
-
-    NSInteger currentIndex = ((NSInteger (*)(id, SEL))objc_msgSend)(
-        segmentedController, @selector(currentIndex));
-    return ValidHomeVisibleIndex(container, segmentedController, currentIndex);
-}
-
 static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex) {
     id segmentedController = HomeSegmentedController(container);
     if (!segmentedController) {
@@ -117,56 +94,13 @@ static void ReloadHomeTimelineTabsAtIndex(id container, NSInteger requestedIndex
     }
 }
 
-// Called BEFORE Twitter's own applicationWillResignActive:. If optional restore
-// is enabled, capture the tab that is actually visible before Twitter mutates or
-// persists any internal selection state. Otherwise explicitly forget it.
-void saveHomeTimelineSelectionBeforeResignActive(void) {
-    HomeColdLaunchAwaitingPinnedRefresh = NO;
-    if (!HideForYouEnabled()) {
-        HomeSessionVisibleIndex = 0;
-        return;
-    }
-
-    HomeSessionVisibleIndex = RestoreHomeTabSelectionEnabled()
-        ? CurrentHomeVisibleIndex(ActiveHomeTimelineContainer)
-        : 0;
-}
-
-// Called AFTER Twitter's applicationDidBecomeActive:. Restore only within the
-// current process. A cold launch never reaches here with an existing Home
-// container; the first viewDidAppear: below always forces Following instead.
-void restoreHomeTimelineSelectionAfterBecomeActive(void) {
-    if (!HideForYouEnabled()) {
-        return;
-    }
-
-    id container = ActiveHomeTimelineContainer;
-    if (!container) {
-        return;
-    }
-
-    ClearHiddenHomeSelection();
-    NSInteger targetIndex =
-        RestoreHomeTabSelectionEnabled() ? HomeSessionVisibleIndex : 0;
-
-    __weak id weakContainer = container;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        id strongContainer = weakContainer;
-        if (strongContainer && HideForYouEnabled()) {
-            ReloadHomeTimelineTabsAtIndex(strongContainer, targetIndex);
-        }
-    });
-}
-
 void applyHideForYouSetting(void) {
     id container = ActiveHomeTimelineContainer;
     if (HideForYouEnabled()) {
         ClearHiddenHomeSelection();
-        HomeSessionVisibleIndex = 0;
-        // Enabling mid-session is itself an initialization point: start from
-        // Following and do not let a later viewDidAppear treat this as cold boot.
-        HomeColdLaunchSelectionApplied = YES;
-        HomeColdLaunchAwaitingPinnedRefresh = NO;
+        // Turning on hide-for-you also selects Following immediately.
+        HomeStartupFollowingPending = NO;
+        HomeStartupInteractionEpoch++;
         if (container) {
             objc_setAssociatedObject(
                 container, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
@@ -174,21 +108,6 @@ void applyHideForYouSetting(void) {
     }
     ReloadHomeTimelineTabsAtIndex(container, 0);
 }
-
-void applyRestoreHomeTabSelectionSetting(void) {
-    if (!HideForYouEnabled()) {
-        HomeSessionVisibleIndex = 0;
-        return;
-    }
-
-    if (RestoreHomeTabSelectionEnabled()) {
-        HomeSessionVisibleIndex = CurrentHomeVisibleIndex(ActiveHomeTimelineContainer);
-    } else {
-        HomeSessionVisibleIndex = 0;
-        ReloadHomeTimelineTabsAtIndex(ActiveHomeTimelineContainer, 0);
-    }
-}
-
 
 // MARK: - Hide custom timelines
 
@@ -300,8 +219,8 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
 - (void)segmentedViewController:(id)controller didTapTabAtIndex:(NSInteger)index {
     // An explicit tab tap takes precedence over the startup Following repair.
     if (HideForYouEnabled()) {
-        HomeColdLaunchAwaitingPinnedRefresh = NO;
-        HomeColdLaunchUserSelectionEpoch++;
+        HomeStartupFollowingPending = NO;
+        HomeStartupInteractionEpoch++;
     }
     %orig(controller, HomeSourceTabIndex(index));
 }
@@ -389,21 +308,28 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
     %orig(repository, hide ? @[] : models);
     SyncHomeAddTabButton(self, hide);
 
-    // A pinned list may arrive asynchronously AFTER the first viewDidAppear
-    // has already forced visible tab 0. The host can then select tab 1 again.
-    // Repair only this initial repository update; later updates must preserve
-    // a list chosen by the user.
-    if (!hide && models.count > 0 && HideForYouEnabled() &&
-        HomeColdLaunchSelectionApplied && HomeColdLaunchAwaitingPinnedRefresh) {
-        HomeColdLaunchAwaitingPinnedRefresh = NO;
-        NSUInteger epoch = HomeColdLaunchUserSelectionEpoch;
+    // Multiple pinned-list snapshots may arrive after an initial tab selection.
+    // Never stop after the *first* snapshot: the next X update used to restore
+    // the second pinned list on some launches. Once the user explicitly taps
+    // a tab, do not interfere with their selection.
+    if (!hide && HideForYouEnabled() && HomeStartupFollowingPending) {
+        NSUInteger epoch = HomeStartupInteractionEpoch;
         __weak id weakSelf = self;
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(250 * NSEC_PER_MSEC)),
+        dispatch_async(dispatch_get_main_queue(), ^{
+            id strongSelf = weakSelf;
+            if (strongSelf && strongSelf == ActiveHomeTimelineContainer &&
+                HomeStartupFollowingPending &&
+                epoch == HomeStartupInteractionEpoch && HideForYouEnabled()) {
+                ClearHiddenHomeSelection();
+                ReloadHomeTimelineTabsAtIndex(strongSelf, 0);
+            }
+        });
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(300 * NSEC_PER_MSEC)),
                        dispatch_get_main_queue(), ^{
             id strongSelf = weakSelf;
             if (strongSelf && strongSelf == ActiveHomeTimelineContainer &&
-                epoch == HomeColdLaunchUserSelectionEpoch && HideForYouEnabled()) {
-                ClearHiddenHomeSelection();
+                HomeStartupFollowingPending &&
+                epoch == HomeStartupInteractionEpoch && HideForYouEnabled()) {
                 ReloadHomeTimelineTabsAtIndex(strongSelf, 0);
             }
         });
@@ -426,47 +352,32 @@ static void SyncHomeAddTabButton(id container, BOOL hidden) {
             self, &HomeInitialSelectionFixedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         ClearHiddenHomeSelection();
 
-        // The first Home appearance in every process is a true cold-launch
-        // initialization point and MUST start on Following regardless of the
-        // optional restore setting. Later container recreation in the same
-        // process may reuse the session tab only when restore is enabled.
-        NSInteger targetIndex = 0;
-        if (HomeColdLaunchSelectionApplied && RestoreHomeTabSelectionEnabled()) {
-            targetIndex = HomeSessionVisibleIndex;
-        } else {
-            HomeSessionVisibleIndex = 0;
-        }
-        BOOL firstHomeAppearance = !HomeColdLaunchSelectionApplied;
-        HomeColdLaunchSelectionApplied = YES;
-        if (firstHomeAppearance) {
-            HomeColdLaunchAwaitingPinnedRefresh = YES;
-        }
-
+        // A brand-new Home container must always begin with Following. Use
+        // visible index 0, NEVER source index 1; the datasource already remaps
+        // visible 0 to the original Following page.
         __weak id weakSelf = self;
-        NSUInteger epoch = HomeColdLaunchUserSelectionEpoch;
+        NSUInteger epoch = HomeStartupInteractionEpoch;
         dispatch_async(dispatch_get_main_queue(), ^{
             id strongSelf = weakSelf;
-            if (strongSelf && HideForYouEnabled()) {
-                ReloadHomeTimelineTabsAtIndex(strongSelf, targetIndex);
+            if (strongSelf && strongSelf == ActiveHomeTimelineContainer &&
+                HomeStartupFollowingPending &&
+                epoch == HomeStartupInteractionEpoch && HideForYouEnabled()) {
+                ReloadHomeTimelineTabsAtIndex(strongSelf, 0);
             }
         });
 
-        // The host can restore its own persisted list immediately after
-        // viewDidAppear on a cold start, even if pinned-data delivery is late.
-        // One additional short correction covers that phase; the epoch guard
-        // prevents overriding a tab explicitly tapped in the meantime.
-        if (firstHomeAppearance) {
-            dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
-                                         (int64_t)(450 * NSEC_PER_MSEC)),
-                           dispatch_get_main_queue(), ^{
-                id strongSelf = weakSelf;
-                if (strongSelf && strongSelf == ActiveHomeTimelineContainer &&
-                    epoch == HomeColdLaunchUserSelectionEpoch &&
-                    HideForYouEnabled()) {
-                    ReloadHomeTimelineTabsAtIndex(strongSelf, 0);
-                }
-            });
-        }
+        // The initial X selection restore often runs later than viewDidAppear.
+        // Follow it once more, but never override an explicit user tab tap.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
+                                     (int64_t)(450 * NSEC_PER_MSEC)),
+                       dispatch_get_main_queue(), ^{
+            id strongSelf = weakSelf;
+            if (strongSelf && strongSelf == ActiveHomeTimelineContainer &&
+                HomeStartupFollowingPending &&
+                epoch == HomeStartupInteractionEpoch && HideForYouEnabled()) {
+                ReloadHomeTimelineTabsAtIndex(strongSelf, 0);
+            }
+        });
     }
 
     SyncHomeAddTabButton(self, [BHTSettings boolForKey:@"hide_custom_timelines"]);
