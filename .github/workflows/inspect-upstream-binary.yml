@@ -149,6 +149,38 @@ jobs:
             exit 1
           fi
 
+      - name: Inspect Explore tab descriptor and collection class metadata
+        run: |
+          set -euo pipefail
+          MAIN="$APP/Frameworks/T1Twitter.framework/T1Twitter"
+          test -f "$MAIN"
+          echo "=== Relevant URT / guide strings ==="
+          strings -a "$MAIN" | grep -Ei 'T1URTGenericViewControllerCollection|LegacyTabDescriptor|LegacySegmentedViewController|GuideContainerViewController|URTChromeViewController' | sort -u | head -n 110 || true
+          echo "=== URT class Objective-C metadata ==="
+          otool -ov "$MAIN" > /tmp/nfb-urt-objc.txt
+          grep -n -B 3 -A 135 -F '_OBJC_CLASS_$_T1URTGenericViewControllerCollection' /tmp/nfb-urt-objc.txt | head -n 155 || true
+          echo "=== Native collection selectors ==="
+          strings -a "$MAIN" | grep -E '^(entries|initWithAccount:entries:priorityQueueActions:displayLocation:isViewControllerCachingEnabled:|numberOfTabsIn:|segmentedViewController:descriptorAtIndex:|segmentedViewController:pageViewControllerAtIndex:|segmentedViewController:didSelectViewController:atIndex:previousIndex:trigger:)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: upstream-binary-inspection
+          path: |
+            selector-report.txt
+            selector-matches.txt
+            home-objc-metadata.txt
+          if-no-files-found: warn
+ || true
+          echo "=== Legend descriptor class locations ==="
+          for bin in "$APP/Frameworks/XAppLibraries.framework/XAppLibraries" "$APP/Frameworks/T1Twitter.framework/T1Twitter" "$APP/Twitter" "$APP/Frameworks/XServiceLibraries.framework/XServiceLibraries"; do
+            if test -f "$bin" && strings -a "$bin" | grep -q 'LegacyTabDescriptor'; then
+              echo "MATCH $bin"
+              strings -a "$bin" | grep -Ei 'LegacyTabDescriptor|LegacyTabGroup|LegacySegmentedViewController' | sort -u | head -n 70 || true
+            fi
+          done
+          echo "=== Collection view model types ==="
+          strings -a "$MAIN" | grep -Ei '^(T1URTGeneric|_Tt.*URTGeneric|.*GenericViewControllerCollectionEntry|.*GenericViewControllerCollectionEntry)' | sort -u | head -n 100 || true
+
       - name: Upload inspection report
         if: always()
         uses: actions/upload-artifact@v7
