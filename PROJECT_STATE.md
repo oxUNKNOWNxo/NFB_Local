@@ -1,9 +1,21 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-11-03 (JST)
+最終更新: 2026-11-05 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+## 0. ローカル改修（2026-11-05、7.3.7）— 探索画面は「トレンド」のみ表示可能にする
+
+- 基準: `main` の7.3.6、公式NeoFreeBird v7.3.0 / X (Twitter) 12.38.1。ローカル独自仕様 `hide_for_you_tab`、起動時Following、ロゴ長押し設定入口、翻訳、ネイティブ返信、TrollStore互換処理を保持。
+- 探索と検索に `explore_trending_only`（初期値オフ）を追加。英語・日本語のタイトル／説明を追加し、既存 `hide_trends` を維持。両方オンの場合は新設定を優先し、検索画面そのものは隠さない。
+- X 12.38.1の `T1Twitter.framework/T1Twitter` をGitHub Actionsで再調査。 `T1URTGenericViewControllerCollection initWithAccount:entries:priorityQueueActions:displayLocation:isViewControllerCachingEnabled:` のObjCタイプ `@48@0:8@16@24B32q36B44` を確認（検査run 41989569103）。このネイティブコレクションの `entries` 引数を安全に抽出できる場合のみ、`id` や `labelText` / `title` 等で「trending / trends / トレンド」と識別された1要素に絞る。
+- `src/Hooks/HideUI.x` に限定フックを追加。タブリストの順序や固定indexを推測せず、正確に1件検出できない場合は元の配列をそのまま返す**fail-open**方式。原生のタブUI・選択・スワイプ機能に任せ、検索バーとその他画面のフックは変更しない。取得不能な場合に備えクラス・個数・表示場所の簡潔な診断ログを出す。
+- **検証状態**: Objective-Cシグネチャの静的確認済み。コンパイル／実機でのタブモデル検出／「トレンド」だけになるか／検索・戻る操作は別途確認が必要。ビルド成功はUIの実機確認を意味しない。
+- 公式からの取り込み基準SHAは7.3.6と同一 `e6dedd455b10732fa3bf475b495946969be71a91`。今回の変更はローカル固有であり更新確認タスクには取り込まない。
+- 作業ブランチ: `automation/upstream-v7-work-20261105-explore-trending-only`。診断ブランチ `automation/inspect-upstream-explore-20261105`。取り込み・公開結果はActionsを参照。
 
 ---
 
