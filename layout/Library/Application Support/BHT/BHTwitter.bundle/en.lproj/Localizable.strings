@@ -289,6 +289,9 @@
 "HIDE_TRENDS_TITLE" = "Hide trending content";
 "HIDE_TRENDS_DETAIL" = "Show only the search bar on the Explore tab, hiding all trends, news and the page tabs.";
 
+"EXPLORE_TRENDING_ONLY_TITLE" = "Show only Trending";
+"EXPLORE_TRENDING_ONLY_DETAIL" = "Keep Search and the Trending category, hiding other Explore tabs. Takes precedence over Hide trending content. Restart X to apply.";
+
 "TAB_BAR_THEMING_TITLE" = "Classic tab bar";
 "TAB_BAR_THEMING_DETAIL" = "Applies your accent color to the currently selected tab item.";
 
