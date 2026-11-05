@@ -7,6 +7,19 @@
 
 ---
 
+## 0. 調査メモ（2026-11-05）— 探索画面「トレンド」のみ表示（未実装）
+
+- 要件: 画面下の「話題を検索」は残す。検索バーと、画面上部カテゴリの「トレンド」タブおよびトレンド一覧・操作だけを残し、「おすすめ」「ニュース」「スポーツ」「エンターテインメント」等は非表示。通常の検索結果遷移、ホームの `hide_for_you_tab` は維持する。
+- 既存 `src/Hooks/HideUI.x` の `hide_trends` は `GuideContainerViewController` 全体と子の `URTChromeViewController`、`tfn_navigationBarAccessoryView` を隠す仕組みであり、反転するだけでは要件を満たさない。旧設定は意味を変更せず、新しい設定 `explore_trending_only` を追加する方針。
+- ベースの公式Twitter 12.38.1（NeoFreeBird v7.3.0）TIPAをGitHub ActionsのMac上で静的解析。検査ブランチ `automation/inspect-upstream-explore-20261105`、最終検査 run **41978043688**（成功）、関連 run **41977459372**（成功）。
+- `Twitter.app/Frameworks/T1Twitter.framework/T1Twitter` で、`_TtC14T1TwitterSwift28GuideContainerViewController`、`_TtC14T1TwitterSwift23URTChromeViewController`、`_TtC14T1TwitterSwift26TrendingPageViewController` を実バイナリ上で確認。`GuideContainerViewController` にはObjective-Cの `selectedTabID` / `setSelectedTabID:` が存在。
+- `URTChromeViewController` にはSwiftフィールド `contentTabs: [URTChromeViewController.Tab]?` と `dataSource` が存在。`Tab.init(id:labelText:labelIconName:generatedTimeline:timelineIdentifier:timelineKey:cacheID:scribeConfig:refreshIntervalSec:)` をシンボルから確認。子コントローラのObjCメソッドだけでは、サーバー由来のタブ列を安全にフィルタするAPIは確認できていない。
+- **未解決**: トレンドの正確なTab.id / 取得タイミングと、Swiftの `contentTabs` フィルタ方法、ユーザーの横スワイプによる他カテゴリ移動、検索結果への遷移保持。名前/固定indexだけの推測による本番向けフックを作成しない。
+- この調査時点では検索画面の機能コード、翻訳、設定、バージョン番号、Package/Promote、`main` は変更していない。実機動作確認も未実施。
+
+---
+
+
 ## 0. ローカル修正（2026-11-03、7.3.6）— 起動時は常にフォロー中／リスト位置復元を撤去
 
 - ユーザー実機で7.3.5でもコールド起動時に2つ目の固定リストが選択される場合がある。従来の `restore_home_tab_selection` 機能の**全面撤去**を指定された。
