@@ -101,6 +101,133 @@
 
 %end
 
+// MARK: - Keep only Trending in the native Explore category strip
+//
+// X 12.38.1 creates its URT Chrome segmented pages through
+// T1URTGenericViewControllerCollection initWithAccount:entries:...  Filtering
+// the original entries at construction time lets X own the page selection,
+// swipe behavior, navigation and timeline lifecycle as usual. Do not hide the
+// whole GuideContainer or rewrite unrelated tab collections.
+//
+// The constructor's ABI was checked against the 12.38.1 T1Twitter binary:
+// @48@0:8@16@24B32q36B44. Never guess a tab index: server-supplied page
+// ordering and available tabs can change.
+static BOOL NFBExploreTrendingOnlyEnabled(void) {
+    return [BHTSettings boolForKey:@"explore_trending_only"];
+}
+
+static BOOL NFBIsTrendingTabLabel(NSString* value) {
+    if (![value isKindOfClass:NSString.class]) {
+        return NO;
+    }
+
+    NSString* label = [[value stringByTrimmingCharactersInSet:
+        [NSCharacterSet whitespaceAndNewlineCharacterSet]] lowercaseString];
+    return [@[@"trending", @"trends", @"trend", @"トレンド"]
+        containsObject:label];
+}
+
+static NSString* NFBSafeExploreEntryString(id entry, NSString* key) {
+    id value = nil;
+    if ([entry isKindOfClass:NSDictionary.class]) {
+        value = ((NSDictionary*)entry)[key];
+    } else if (entry) {
+        SEL getter = NSSelectorFromString(key);
+        if ([entry respondsToSelector:getter]) {
+            // Only call zero-argument object-returning accessors.
+            Method method = class_getInstanceMethod([entry class], getter);
+            char type[8] = {0};
+            if (method && method_getReturnType(method, type, sizeof(type)) && type[0] == '@') {
+                value = ((id (*)(id, SEL))objc_msgSend)(entry, getter);
+            }
+        }
+        if (!value) {
+            @try {
+                value = [entry valueForKey:key];
+            } @catch (__unused NSException* exception) {
+                value = nil;
+            }
+        }
+    }
+
+    return [value isKindOfClass:NSString.class] ? value : nil;
+}
+
+static BOOL NFBExploreEntryIsTrending(id entry) {
+    if ([entry isKindOfClass:NSString.class]) {
+        return NFBIsTrendingTabLabel(entry);
+    }
+    for (NSString* key in @[@"id", @"tabID", @"tabId", @"tabIdentifier",
+                             @"identifier", @"timelineKey", @"title",
+                             @"label", @"labelText", @"displayName", @"name"]) {
+        if (NFBIsTrendingTabLabel(NFBSafeExploreEntryString(entry, key))) {
+            return YES;
+        }
+    }
+
+    // Some Swift tab wrapper types expose no Objective-C properties but do
+    // provide a structured debug description. Match only a *field value* to
+    // avoid selecting an unrelated page merely mentioning trending topics.
+    NSString* description = [[entry description] lowercaseString];
+    if (![description isKindOfClass:NSString.class] || description.length > 1000) {
+        return NO;
+    }
+    return [description containsString:@"id: \"trending\""] ||
+           [description containsString:@"id = trending"] ||
+           [description containsString:@"id: \"trends\""] ||
+           [description containsString:@"labeltext: \"trending\""] ||
+           [description containsString:@"labeltext: \"トレンド\""];
+}
+
+static NSArray* NFBExploreTrendingEntries(NSArray* entries, NSInteger displayLocation) {
+    if (!NFBExploreTrendingOnlyEnabled() ||
+        ![entries isKindOfClass:NSArray.class] || entries.count <= 1) {
+        return entries;
+    }
+
+    id matched = nil;
+    NSUInteger matchedCount = 0;
+    for (id entry in entries) {
+        if (NFBExploreEntryIsTrending(entry)) {
+            matched = entry;
+            ++matchedCount;
+        }
+    }
+
+    // Fail open if the host changed its model or IDs; do not use an index
+    // guessed from the Japanese or English order.
+    if (matchedCount != 1) {
+        static BOOL loggedUnknownExploreEntries = NO;
+        if (!loggedUnknownExploreEntries) {
+            loggedUnknownExploreEntries = YES;
+            NSLog(@"[NFB_Local] Trending-only skipped ambiguous native tab entries "
+                  @"(count=%lu, matched=%lu, location=%ld, entryClass=%@)",
+                  (unsigned long)entries.count, (unsigned long)matchedCount,
+                  (long)displayLocation,
+                  entries.count ? NSStringFromClass([entries.firstObject class]) : @"none");
+        }
+        return entries;
+    }
+
+    NSLog(@"[NFB_Local] Trending-only retained 1/%lu native Explore tab "
+          @"(location=%ld)", (unsigned long)entries.count, (long)displayLocation);
+    return @[matched];
+}
+
+%hook T1URTGenericViewControllerCollection
+
+- (instancetype)initWithAccount:(id)account
+                        entries:(NSArray*)entries
+           priorityQueueActions:(BOOL)priorityQueueActions
+                displayLocation:(NSInteger)displayLocation
+ isViewControllerCachingEnabled:(BOOL)cachingEnabled {
+    NSArray* nativeEntries = NFBExploreTrendingEntries(entries, displayLocation);
+    return %orig(account, nativeEntries, priorityQueueActions,
+                 displayLocation, cachingEnabled);
+}
+
+%end
+
 // MARK: - Hide trending content on the Explore tab
 
 // Trending content lives in the child URT chrome view controller, whose
@@ -112,7 +239,7 @@
 - (void)viewDidLoad {
     %orig;
 
-    if ([BHTSettings boolForKey:@"hide_trends"]) {
+    if ([BHTSettings boolForKey:@"hide_trends"] && !NFBExploreTrendingOnlyEnabled()) {
         UIView* viewIfLoaded = [(UIViewController*)self viewIfLoaded];
         if (viewIfLoaded) {
             viewIfLoaded.hidden = YES;
@@ -129,7 +256,7 @@
 }
 
 - (UIView*)tfn_navigationBarAccessoryView {
-    return [BHTSettings boolForKey:@"hide_trends"] ? nil : %orig;
+    return ([BHTSettings boolForKey:@"hide_trends"] && !NFBExploreTrendingOnlyEnabled()) ? nil : %orig;
 }
 
 %end
@@ -137,7 +264,7 @@
 %hook UIView
 - (void)didMoveToWindow {
     %orig;
-    if ([BHTSettings boolForKey:@"hide_trends"] && [self.accessibilityIdentifier isEqualToString:@"T1TwitterSwift.TrendsSidebarViewController"] && is_iPad()) {
+    if ([BHTSettings boolForKey:@"hide_trends"] && !NFBExploreTrendingOnlyEnabled() && [self.accessibilityIdentifier isEqualToString:@"T1TwitterSwift.TrendsSidebarViewController"] && is_iPad()) {
         self.hidden = YES;
         self.userInteractionEnabled = NO;
         for (UIView* subview in self.subviews) {
