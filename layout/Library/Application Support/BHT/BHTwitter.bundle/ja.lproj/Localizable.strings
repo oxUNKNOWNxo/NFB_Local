@@ -283,6 +283,9 @@
 "HIDE_TRENDS_TITLE" = "トレンドを非表示";
 "HIDE_TRENDS_DETAIL" = "「話題を検索」タブでは検索バーのみを表示し、トレンド、ニュース、ページタブを非表示にします。";
 
+"EXPLORE_TRENDING_ONLY_TITLE" = "「トレンド」のみ表示";
+"EXPLORE_TRENDING_ONLY_DETAIL" = "検索バーと「トレンド」を残し、ほかの話題カテゴリを非表示にします。「トレンドを非表示」より優先されます。変更後はXを再起動してください。";
+
 "TAB_BAR_THEMING_TITLE" = "クラシックなタブバーを使用";
 "TAB_BAR_THEMING_DETAIL" = "選択中のタブにアクセントカラーを適用し、従来のタブバーの外観にします。";
 
