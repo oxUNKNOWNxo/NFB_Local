@@ -167,6 +167,16 @@ jobs:
           done
           echo "=== Relevant ObjC metadata selectors ==="
           grep -n -F 'LegacyTabDescriptor' /tmp/urt-objc.txt | head -n 35 || true
+      - name: Inspect legacy tab descriptor framework metadata
+        run: |
+          set -euo pipefail
+          for BIN in "$APP/Frameworks/XAppLibraries.framework/XAppLibraries" "$APP/Frameworks/XServiceLibraries.framework/XServiceLibraries" "$APP/Frameworks/T1Twitter.framework/T1Twitter" "$APP/Twitter"; do
+            test -f "$BIN" || continue
+            echo "=== Swift ObjC descriptor in $BIN ==="
+            nm -a "$BIN" 2>/dev/null | grep -F "LegacyTabDescriptor" | head -n 30 || true
+            otool -ov "$BIN" > /tmp/nfb-tabdesc.txt
+            grep -n -B 5 -A 110 -F '_OBJC_CLASS_$__TtC10TFNUISwift19LegacyTabDescriptor' /tmp/nfb-tabdesc.txt | head -n 133 || true
+          done
       - name: Upload inspection report
         if: always()
         uses: actions/upload-artifact@v7
