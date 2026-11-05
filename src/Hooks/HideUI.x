@@ -153,7 +153,13 @@ static NSString* NFBSafeExploreEntryString(id entry, NSString* key) {
         }
     }
 
-    return [value isKindOfClass:NSString.class] ? value : nil;
+    if ([value isKindOfClass:NSString.class]) {
+        return value;
+    }
+    if ([value isKindOfClass:NSAttributedString.class]) {
+        return [(NSAttributedString*)value string];
+    }
+    return nil;
 }
 
 static BOOL NFBExploreEntryIsTrending(id entry) {
@@ -162,10 +168,44 @@ static BOOL NFBExploreEntryIsTrending(id entry) {
     }
     for (NSString* key in @[@"id", @"tabID", @"tabId", @"tabIdentifier",
                              @"identifier", @"timelineKey", @"title",
-                             @"label", @"labelText", @"displayName", @"name"]) {
+                             @"label", @"labelText", @"displayName", @"name",
+                             @"text", @"titleText", @"tabTitle", @"attributedTitle",
+                             @"accessibilityLabel", @"headerTitle", @"displayText"]) {
         if (NFBIsTrendingTabLabel(NFBSafeExploreEntryString(entry, key))) {
             return YES;
         }
+    }
+
+    // The native LegacyTabDescriptor may store a label as an object ivar,
+    // rather than exporting an Objective-C property. Inspect only declared
+    // object ivars; never interpret raw Swift.String/struct memory as an object.
+    unsigned int ivarCount = 0;
+    Ivar* ivars = class_copyIvarList([entry class], &ivarCount);
+    for (unsigned int index = 0; ivars && index < ivarCount && index < 40; ++index) {
+        const char* name = ivar_getName(ivars[index]);
+        const char* type = ivar_getTypeEncoding(ivars[index]);
+        if (!name || !type || type[0] != '@') {
+            continue;
+        }
+        NSString* field = [NSString stringWithUTF8String:name];
+        if (![field.lowercaseString containsString:@"title"] &&
+            ![field.lowercaseString containsString:@"label"] &&
+            ![field.lowercaseString containsString:@"text"] &&
+            ![field.lowercaseString containsString:@"name"] &&
+            ![field.lowercaseString containsString:@"identifier"]) {
+            continue;
+        }
+        id value = object_getIvar(entry, ivars[index]);
+        NSString* label = [value isKindOfClass:NSString.class] ? value :
+            ([value isKindOfClass:NSAttributedString.class] ?
+             [(NSAttributedString*)value string] : nil);
+        if (NFBIsTrendingTabLabel(label)) {
+            free(ivars);
+            return YES;
+        }
+    }
+    if (ivars) {
+        free(ivars);
     }
 
     // Some Swift tab wrapper types expose no Objective-C properties but do
@@ -217,6 +257,63 @@ static NSArray* NFBExploreTrendingEntries(NSArray* entries, NSInteger displayLoc
     return @[matched];
 }
 
+// The constructor-time filter in 7.3.7 can fail when the Swift entry type
+// does not expose its title via Objective-C. The native collection's *actual*
+// segmented data source provides a second, direct route to the tab descriptors.
+// Always map all related callbacks to the same original category index, so a
+// single visible category cannot accidentally display the For You page.
+static __thread BOOL NFBReadingNativeExploreTabs = NO;
+
+static NSInteger NFBNativeTrendingIndex(id collection, id segmented) {
+    if (!NFBExploreTrendingOnlyEnabled() || !collection || !segmented) {
+        return NSNotFound;
+    }
+
+    SEL countSelector = @selector(numberOfTabsIn:);
+    SEL descriptorSelector = @selector(segmentedViewController:descriptorAtIndex:);
+    if (![collection respondsToSelector:countSelector] ||
+        ![collection respondsToSelector:descriptorSelector]) {
+        return NSNotFound;
+    }
+
+    BOOL oldFlag = NFBReadingNativeExploreTabs;
+    NFBReadingNativeExploreTabs = YES;
+    NSInteger foundIndex = NSNotFound;
+    NSInteger matches = 0;
+    NSInteger nativeCount = 0;
+    @try {
+        nativeCount = ((NSInteger (*)(id, SEL, id))objc_msgSend)(
+            collection, countSelector, segmented);
+        if (nativeCount > 1 && nativeCount <= 16) {
+            for (NSInteger index = 0; index < nativeCount; ++index) {
+                id descriptor = ((id (*)(id, SEL, id, NSInteger))objc_msgSend)(
+                    collection, descriptorSelector, segmented, index);
+                if (NFBExploreEntryIsTrending(descriptor)) {
+                    foundIndex = index;
+                    ++matches;
+                }
+            }
+        }
+    } @catch (__unused NSException* error) {
+        foundIndex = NSNotFound;
+        matches = 0;
+    } @finally {
+        NFBReadingNativeExploreTabs = oldFlag;
+    }
+
+    if (matches != 1) {
+        return NSNotFound;
+    }
+
+    static BOOL loggedDetection = NO;
+    if (!loggedDetection) {
+        loggedDetection = YES;
+        NSLog(@"[NFB_Local] Explore: native descriptor Trending index=%ld count=%ld",
+              (long)foundIndex, (long)nativeCount);
+    }
+    return foundIndex;
+}
+
 %hook T1URTGenericViewControllerCollection
 
 - (instancetype)initWithAccount:(id)account
@@ -227,6 +324,56 @@ static NSArray* NFBExploreTrendingEntries(NSArray* entries, NSInteger displayLoc
     NSArray* nativeEntries = NFBExploreTrendingEntries(entries, displayLocation);
     return %orig(account, nativeEntries, priorityQueueActions,
                  displayLocation, cachingEnabled);
+}
+
+- (NSInteger)numberOfTabsIn:(id)segmented {
+    NSInteger nativeCount = %orig;
+    if (NFBReadingNativeExploreTabs || !NFBExploreTrendingOnlyEnabled() ||
+        nativeCount <= 1) {
+        return nativeCount;
+    }
+    return NFBNativeTrendingIndex(self, segmented) == NSNotFound ?
+           nativeCount : 1;
+}
+
+- (id)segmentedViewController:(id)segmented descriptorAtIndex:(NSInteger)index {
+    if (NFBReadingNativeExploreTabs || !NFBExploreTrendingOnlyEnabled() ||
+        index != 0) {
+        return %orig;
+    }
+    NSInteger trendIndex = NFBNativeTrendingIndex(self, segmented);
+    return trendIndex == NSNotFound ? %orig :
+           %orig(segmented, trendIndex);
+}
+
+- (id)segmentedViewController:(id)segmented pageViewControllerAtIndex:(NSInteger)index {
+    if (NFBReadingNativeExploreTabs || !NFBExploreTrendingOnlyEnabled() ||
+        index != 0) {
+        return %orig;
+    }
+    NSInteger trendIndex = NFBNativeTrendingIndex(self, segmented);
+    return trendIndex == NSNotFound ? %orig :
+           %orig(segmented, trendIndex);
+}
+
+- (void)segmentedViewController:(id)segmented
+       didSelectViewController:(id)viewController
+                       atIndex:(NSInteger)index
+                 previousIndex:(NSInteger)previousIndex
+                       trigger:(NSInteger)trigger {
+    if (NFBReadingNativeExploreTabs || !NFBExploreTrendingOnlyEnabled() ||
+        index != 0) {
+        %orig;
+        return;
+    }
+
+    NSInteger trendIndex = NFBNativeTrendingIndex(self, segmented);
+    if (trendIndex == NSNotFound) {
+        %orig;
+        return;
+    }
+    NSInteger originalPrevious = previousIndex == 0 ? trendIndex : previousIndex;
+    %orig(segmented, viewController, trendIndex, originalPrevious, trigger);
 }
 
 %end
