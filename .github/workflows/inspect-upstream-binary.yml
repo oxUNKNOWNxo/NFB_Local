@@ -64,115 +64,35 @@ jobs:
           test -n "$APP"
           echo "APP=$APP" >> "$GITHUB_ENV"
 
-      - name: Inspect Home timeline compatibility
-        env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          ASSET_NAME: ${{ steps.release.outputs.asset }}
+      - name: Inspect current X 12.38.1 Explore modules (diagnostic only)
         run: |
           set -euo pipefail
-
-          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
-          APP_VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist")
-          MAIN="$APP/$EXECUTABLE"
-          test -f "$MAIN"
-
-          cat > required-selectors.txt <<'EOF'
-          TwitterHomeFeatureImplementation35HomeTimelineContainerViewController
-          numberOfTabsIn:
-          segmentedViewController:descriptorAtIndex:
-          segmentedViewController:pageViewControllerAtIndex:
-          segmentedViewController:shouldSelectViewControllerAtIndex:
-          segmentedViewController:isPrewarmableTabAtIndex:
-          segmentedViewController:isUnreadIndicatorTabAtIndex:
-          segmentedViewController:menuForTabAtIndex:
-          segmentedViewController:tabGroupAtIndex:
-          segmentedViewController:didTapTabAtIndex:
-          segmentedViewController:didLongPressAtIndex:
-          selectTimelineVariant:shouldRefresh:
-          selectFilteredTimelineVariant:shouldRefresh:
-          clearLastSelectedTabIdentifier
-          segmentedViewController
-          currentIndex
-          reloadDataWithSelectingIndex:
-          pinnedTimelinesRepository:didChangeWithPinnedTimelineModels:
-          tfn_navigationBarAccessoryView
-          updatePinnedTimelines:
-          fetchPinnedTimelinesWithThrottleEnabled:
-          EOF
-          sed -i '' 's/^          //' required-selectors.txt
-
-          : > selector-matches.txt
-          while IFS= read -r -d '' file; do
-            if file "$file" | grep -q 'Mach-O'; then
-              rel="${file#$APP/}"
-              strings -a "$file" 2>/dev/null | grep -Ff required-selectors.txt | \
-                sed "s#^#${rel}: #" >> selector-matches.txt || true
-            fi
-          done < <(find "$APP" -type f -print0)
-
-          {
-            echo "NeoFreeBird release: $RELEASE_TAG"
-            echo "Official asset: $ASSET_NAME"
-            echo "Twitter app version: $APP_VERSION"
-            echo "Executable: $EXECUTABLE"
-            echo
-            echo "Required selector/token results:"
-          } > selector-report.txt
-
-          missing=0
-          while IFS= read -r token; do
-            if grep -Fq "$token" selector-matches.txt; then
-              echo "PASS  $token" | tee -a selector-report.txt
-            else
-              echo "FAIL  $token" | tee -a selector-report.txt
-              missing=$((missing + 1))
-            fi
-          done < required-selectors.txt
-
-          {
-            echo
-            echo "Matched locations:"
-            sort -u selector-matches.txt
-          } >> selector-report.txt
-
-          # Objective-C metadata is useful for confirming that the Swift Home
-          # container still exposes the data-source methods, not merely that an
-          # unrelated binary contains the same selector text.
-          otool -ov "$MAIN" > objc-metadata.txt 2>/dev/null || true
-          grep -n -E -B 8 -A 120 \
-            'HomeTimelineContainerViewController|numberOfTabsIn:|descriptorAtIndex:|pageViewControllerAtIndex:|reloadDataWithSelectingIndex:' \
-            objc-metadata.txt > home-objc-metadata.txt || true
-
-          cat selector-report.txt
-          if [ "$missing" -ne 0 ]; then
-            echo "Missing $missing required Home selector/token(s)." >&2
-            exit 1
-          fi
-
-      - name: Inspect Explore Trending tab structure (diagnostic only)
-        run: |
-          set -euo pipefail
-          echo "=== Locate Mach-O frameworks containing GuideContainerViewController ==="
+          echo "=== Framework names relevant to search ==="
+          find "$APP/Frameworks" -maxdepth 1 -type d | grep -Ei 'Twitter|Search|Explore|Guide|Trend|Discovery' | head -n 100 || true
+          echo "=== Swift and ObjC class names from matching Mach-O binaries ==="
           while IFS= read -r -d '' binary; do
             if ! file "$binary" | grep -q 'Mach-O'; then
               continue
             fi
-            if ! strings -a "$binary" 2>/dev/null | grep -q 'GuideContainerViewController'; then
-              continue
+            matches=$(strings -a "$binary" 2>/dev/null | grep -Ei '(Guide|Explore|Trend|Discovery|Search).*ViewController|T1TwitterSwift.*Guide|tfn_navigationBarAccessoryView' | head -n 55 || true)
+            if [ -n "$matches" ]; then
+              echo "=== $binary ==="
+              echo "$matches"
             fi
-            echo "=== MATCHING BINARY: $binary ==="
-            echo "=== Guide/explore strings ==="
-            strings -a "$binary" | grep -Ei 'GuideContainer|GuideTab|GuideNavigation|Explore|TrendsSidebar|Trending|URTChrome|tfn_navigationBarAccessoryView|segment|tab' | sort -u | head -n 220 || true
-            echo "=== ObjC class metadata and selectors ==="
-            otool -ov "$binary" > /tmp/nfb-explore-objc.txt 2>/dev/null || true
-            grep -n -E 'GuideContainerViewController|Guide.*Tab|tfn_navigationBarAccessoryView|Guide.*Page|guide.*tab' /tmp/nfb-explore-objc.txt | head -n 85 || true
-            echo "=== Guide container method context ==="
-            grep -n -A 270 -B 12 'name .*GuideContainerViewController' /tmp/nfb-explore-objc.txt | head -n 290 || true
-            echo "=== Guide-related ObjC selectors ==="
-            grep -E 'name +.*(guide|Guide|trend|Trend|tab|Tab|navigationBarAccessory|pageViewController|segmentedViewController)' /tmp/nfb-explore-objc.txt | sort -u | head -n 250 || true
-            echo "=== Swift symbols for Guide ==="
-            nm -a "$binary" 2>/dev/null | xcrun swift-demangle 2>/dev/null | grep -Ei 'GuideContainer|GuideTab|ExploreTab|TrendingTab|GuidePage' | head -n 130 || true
           done < <(find "$APP" -type f -print0)
+          echo "=== T1TwitterSwift main framework ObjC selectors, if present ==="
+          BINARY="$APP/Frameworks/T1TwitterSwift.framework/T1TwitterSwift"
+          if [ -f "$BINARY" ]; then
+            echo "--- strings Guide/Explore/Trend classes ---"
+            strings -a "$BINARY" | grep -Ei 'Guide|Explore|TrendsSidebar|Trending.*View|Search.*View|Navigation.*Accessory' | head -n 160 || true
+            echo "--- ObjC metadata Guide/Explore/Trend classes ---"
+            otool -ov "$BINARY" > /tmp/nfb-current-explore-objc.txt 2>/dev/null || true
+            grep -n -E 'Guide.*ViewController|Explore.*ViewController|Trend.*ViewController|Search.*ViewController|tfn_navigationBarAccessoryView' /tmp/nfb-current-explore-objc.txt | head -n 120 || true
+            echo "--- matching metadata context (first names) ---"
+            grep -n -A 110 -B 7 -E 'name .*Guide.*ViewController|name .*Explore.*ViewController' /tmp/nfb-current-explore-objc.txt | head -n 500 || true
+          else
+            echo "No T1TwitterSwift standalone framework found"
+          fi
 
       - name: Upload inspection report
         if: always()
