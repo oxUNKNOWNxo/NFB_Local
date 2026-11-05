@@ -137,8 +137,11 @@ static NSString* NFBSafeExploreEntryString(id entry, NSString* key) {
             // Only call zero-argument object-returning accessors.
             Method method = class_getInstanceMethod([entry class], getter);
             char type[8] = {0};
-            if (method && method_getReturnType(method, type, sizeof(type)) && type[0] == '@') {
-                value = ((id (*)(id, SEL))objc_msgSend)(entry, getter);
+            if (method) {
+                method_getReturnType(method, type, sizeof(type));
+                if (type[0] == '@') {
+                    value = ((id (*)(id, SEL))objc_msgSend)(entry, getter);
+                }
             }
         }
         if (!value) {
