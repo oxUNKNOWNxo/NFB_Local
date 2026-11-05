@@ -64,22 +64,17 @@ jobs:
           test -n "$APP"
           echo "APP=$APP" >> "$GITHUB_ENV"
 
-      - name: Inspect Guide and URT Chrome tab pipeline (diagnostic only)
+      - name: Inspect Generic URT tabs argument signatures (diagnostic only)
         run: |
           set -euo pipefail
           BINARY="$APP/Frameworks/T1Twitter.framework/T1Twitter"
-          echo "=== Guide and URTChrome data-source symbols ==="
-          nm -a "$BINARY" 2>/dev/null | xcrun swift-demangle 2>/dev/null | grep -Ei 'URTChromeViewController.*(dataSource|contentTabs|content\.getter|Tab\.|Content\.|DataSource\.)|GuideContainerViewController.*(selectedTabID|viewDidLoad)' | head -n 130 || true
-          echo "=== Relevant generic collection methods ==="
-          nm -a "$BINARY" 2>/dev/null | grep -i 'T1URTGenericViewControllerCollection' | head -n 140 || true
-          echo "=== Disassembly support ==="
-          xcrun -f llvm-objdump || true
-          echo "=== Guide selectedTabID setter ==="
-          xcrun llvm-objdump -d --start-address=0xaf5100 --stop-address=0xaf5190 "$BINARY" | head -n 130 || true
-          echo "=== Guide viewDidLoad init ==="
-          xcrun llvm-objdump -d --start-address=0xaf4ee8 --stop-address=0xaf4fd0 "$BINARY" | head -n 130 || true
-          echo "=== URT Chrome selection changed handler ==="
-          xcrun llvm-objdump -d --start-address=0x114e8f8 --stop-address=0x114e958 "$BINARY" | head -n 95 || true
+          echo "=== Generic view controller tab collection metadata ==="
+          otool -ov "$BINARY" > /tmp/urt-generic.txt
+          grep -n -B 8 -A 230 -F '_OBJC_CLASS_$_T1URTGenericViewControllerCollection' /tmp/urt-generic.txt | head -n 255 || true
+          echo "=== Init and entries selectors ==="
+          nm -a "$BINARY" 2>/dev/null | grep -E '(T1URTGenericViewControllerCollection.*initWithAccount:entries:|T1URTGenericViewControllerCollection.*entries\]|T1URTGenericViewControllerCollection.*numberOfTabsIn:)' | head -n 24 || true
+          echo "=== Collection entry class names ==="
+          strings -a "$BINARY" | grep -Ei '(URTGeneric.*Entry|generic.*collection.*entry|URTChromeViewController\.Tab|URTChromeViewController\.DataSource)' | sort -u | head -n 90 || true
 
       - name: Upload inspection report
         if: always()
