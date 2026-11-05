@@ -394,6 +394,9 @@ static NSDictionary<NSString*, NSDictionary*>* BHTSettingsPages(void) {
                     @{@"key": @"hide_trends",
                       @"default": @NO,
                       @"type": @"toggle"},
+                    @{@"key": @"explore_trending_only",
+                      @"default": @NO,
+                      @"type": @"toggle"},
                     @{
                         @"key": @"hide_trend_videos",
                         @"default": @NO,
