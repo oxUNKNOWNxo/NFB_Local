@@ -149,6 +149,23 @@ jobs:
             exit 1
           fi
 
+      - name: Inspect Explore Trending tab structure (diagnostic only)
+        run: |
+          set -euo pipefail
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          MAIN="$APP/$EXECUTABLE"
+          echo "=== Guide/explore-related strings in host binary ==="
+          strings -a "$MAIN" | grep -Ei 'GuideContainer|GuideTab|GuideNavigation|Explore|TrendsSidebar|Trending|guide_tabs|guide-tab|tfn_navigationBarAccessoryView|URTChrome' | sort -u | head -n 230 || true
+          echo "=== ObjC metadata: matching guide class locations and methods ==="
+          otool -ov "$MAIN" > /tmp/nfb-explore-objc.txt 2>/dev/null || true
+          grep -n -E 'GuideContainerViewController|Guide.*Tab|tfn_navigationBarAccessoryView|Guide.*Page' /tmp/nfb-explore-objc.txt | head -n 65 || true
+          echo "=== Guide container context ==="
+          grep -n -A 130 -B 15 'name .*GuideContainerViewController' /tmp/nfb-explore-objc.txt | head -n 230 || true
+          echo "=== Objective-C selectors relevant to guide tab data ==="
+          grep -E 'name +.*(guide|Guide|trend|Trend|tab|Tab|navigationBarAccessory|pageViewController|segmentedViewController)' /tmp/nfb-explore-objc.txt | sort -u | head -n 170 || true
+          echo "=== Swift symbols related to guide tab container ==="
+          nm -a "$MAIN" 2>/dev/null | swift-demangle | grep -Ei 'GuideContainer|GuideTab|ExploreTab|TrendingTab|GuidePage' | head -n 180 || true
+
       - name: Upload inspection report
         if: always()
         uses: actions/upload-artifact@v7
