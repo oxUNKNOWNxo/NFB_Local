@@ -7,6 +7,18 @@
 
 ---
 
+## 0. ローカル修正（2026-11-05、7.3.8）— 探索画面「トレンドのみ表示」再修正
+
+- **ユーザー実機:** 7.3.7をインストールして設定しても表示に変化がなかった。7.3.7のコンストラクタ時フィルタはカテゴリ名がObjective-Cとして取り出せない場合などに無効化される（fail-open）。実際の原因を示す実機ログは未取得。
+- 7.3.8は `T1URTGenericViewControllerCollection` にある本来の `LegacySegmentedViewControllerDataSource` インターフェイス（`numberOfTabsIn:` / `segmentedViewController:descriptorAtIndex:` / `segmentedViewController:pageViewControllerAtIndex:`）にフックを追加。元々のカテゴリ数とラベルをタブ列から直接取得し、唯一の「trending/trends/トレンド」だけを提示できる場合に**可視タブ数を1**へ絞り、表示ページを元のトレンドindexに対応付ける。
+- `segmentedViewController:didSelectViewController:atIndex:previousIndex:trigger:` も元のトレンドindexにマップし、描画だけでなく選択通知の整合性を確保。内部スキャン時はスレッドローカルガードで元のデータソースの値を取得し、推測の固定indexは使わない。構造や識別子が変更された場合は元の表示を維持する。
+- 7.3.7の初期化時フィルタも保持し、タイトルが `NSAttributedString` の場合、追加ゲッター、オブジェクト型ivarを経由した検出を補完する。Swift値型のメモリをObjCオブジェクトとして読み出すことはしない。
+- 新設定 `explore_trending_only` は初期値オフ、元の `hide_trends` と英日翻訳を保持。ほかのホームタブ・TrollStore用依存名修正や上流SHAは変更なし。
+- **検証区分:** 静的なObjCメソッド型確認・コンパイル・Package成功と実機表示の成功を区別する。今回も実機結果は未確認のまま「修正確認済み」とは書かない。
+- ブランチ `automation/upstream-v7-work-20261105-explore-v738`、検査ブランチ `automation/inspect-upstream-explore-v738-20261105`。
+
+---
+
 ## 0. ローカル改修（2026-11-05、7.3.7）— 探索画面は「トレンド」のみ表示可能にする
 
 - 基準: `main` の7.3.6、公式NeoFreeBird v7.3.0 / X (Twitter) 12.38.1。ローカル独自仕様 `hide_for_you_tab`、起動時Following、ロゴ長押し設定入口、翻訳、ネイティブ返信、TrollStore互換処理を保持。
