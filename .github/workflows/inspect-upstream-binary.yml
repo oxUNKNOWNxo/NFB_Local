@@ -64,24 +64,20 @@ jobs:
           test -n "$APP"
           echo "APP=$APP" >> "$GITHUB_ENV"
 
-      - name: Inspect GuideContainerViewController in T1Twitter binary
+      - name: Inspect URTChrome Explore tab model (diagnostic only)
         run: |
           set -euo pipefail
           BINARY="$APP/Frameworks/T1Twitter.framework/T1Twitter"
           test -f "$BINARY"
-          echo "=== Class and relevant selector names ==="
-          strings -a "$BINARY" | grep -Ei '(Guide|Explore|Trending|Tab|Segment|Page|Navigation).*(Controller|DataSource|Delegate|Index|Selection)' | sort -u | head -n 270 || true
-          echo "=== ObjC metadata positions ==="
-          otool -ov "$BINARY" > /tmp/nfb-guide-objc.txt
-          grep -n -E 'GuideContainerViewController|TrendingPageViewController|TrendingHeaderViewController|TrendsLandingViewController|tfn_navigationBarAccessoryView' /tmp/nfb-guide-objc.txt | head -n 80 || true
-          echo "=== GuideContainer ObjC class neighborhoods ==="
-          grep -n -B 190 -A 220 -F '_TtC14T1TwitterSwift28GuideContainerViewController' /tmp/nfb-guide-objc.txt | head -n 850 || true
-          echo "=== Trending page neighborhoods ==="
-          grep -n -B 120 -A 160 -F '_TtC14T1TwitterSwift26TrendingPageViewController' /tmp/nfb-guide-objc.txt | head -n 420 || true
-          echo "=== Search and guide-specific ObjC method names ==="
-          grep -E 'name +.*(guide|Guide|trending|Trending|explore|Explore|tabs|Tabs|tabAtIndex|TabAtIndex|segment|Segment|navigationBarAccessoryView)' /tmp/nfb-guide-objc.txt | sort -u | head -n 330 || true
-          echo "=== Swift symbols ==="
-          nm -a "$BINARY" 2>/dev/null | xcrun swift-demangle 2>/dev/null | grep -Ei 'GuideContainerViewController|TrendingPageViewController|TrendingHeaderViewController' | head -n 160 || true
+          echo "=== Explore/Guide/URTChrome Swift symbols ==="
+          nm -a "$BINARY" 2>/dev/null | xcrun swift-demangle 2>/dev/null | grep -E 'URTChromeViewController|GuideContainerViewController|GuideTab|URTChromeViewModel' | head -n 230 || true
+          echo "=== Relevant selector token strings ==="
+          strings -a "$BINARY" | grep -Ei '(^|[_/])(trending|trends|for_you|news|sports|entertainment|explore|guide)([_/]|$)|selectedTabID|tabIdentifier|selectedTab|tabsContent|tabItems|GuideTab' | sort -u | head -n 180 || true
+          echo "=== URT Chrome ObjC metadata ==="
+          otool -ov "$BINARY" > /tmp/nfb-urtchrome-objc.txt
+          grep -n -E 'URTChromeViewController|selectedTabID' /tmp/nfb-urtchrome-objc.txt | head -n 100 || true
+          echo "=== URTChrome class neighborhood ==="
+          grep -n -B 50 -A 160 -F '_TtC14T1TwitterSwift23URTChromeViewController' /tmp/nfb-urtchrome-objc.txt | head -n 390 || true
 
       - name: Upload inspection report
         if: always()
