@@ -140,6 +140,11 @@ static BOOL NFBIsCurrentExploreTabCollection(id collection) {
         return NO;
     }
 
+    Class chromeClass = NSClassFromString(@"T1TwitterSwift.URTChromeViewController");
+    if (chromeClass && [delegate isKindOfClass:chromeClass]) {
+        return YES;
+    }
+
     NSString* className = NSStringFromClass([delegate class]);
     return [className isEqualToString:@"T1TwitterSwift.URTChromeViewController"] ||
            [className isEqualToString:@"_TtC14T1TwitterSwift23URTChromeViewController"];
