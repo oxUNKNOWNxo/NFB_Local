@@ -7,6 +7,19 @@
 
 ---
 
+## 0. ローカル修正（2026-11-05、7.3.9）— 実機スクリーンショットに基づく「トレンド」のみ表示
+
+- **実機報告:** 7.3.8で `explore_trending_only` を有効にしても、カテゴリ列に「話題を検索」「トレンド」「ニュース」「スポーツ」等が残る。画像 `IMG_7565.jpeg` で「話題を検索」も**カテゴリの1つ（先頭）**であり、削除対象と判明。残すのは検索バー・設定アイコン・「トレンド」1つとトレンドの表示先だけ。
+- 7.3.7と7.3.8は、Swiftのタブ記述子からObjective-Cで`trending`を抽出できない場合に無変更となる可能性がある。前版の包括的フィルタ（初期化時の全画面影響リスクを含む）を撤去。
+- 12.38.1の`T1Twitter.framework`解析で、`T1TwitterSwift.URTChromeViewController` が `T1URTGenericViewControllerCollectionDelegate` であること、`T1URTGenericViewControllerCollection` が `numberOfTabsIn:` / `segmentedViewController:descriptorAtIndex:` / `pageViewControllerAtIndex:` / `didSelect...` を実装していることを確認。
+- **新方式:** `delegate` が `T1TwitterSwift.URTChromeViewController` と一致し、ホストXが`12.38.1`の場合に限り、元のカテゴリ数2〜16件で可視数を1に変更。画像で実証された`「トレンド」= 元のインデックス1`に、可視インデックス0の記述子・表示ページ・選択通知を一括対応させる。別の検索結果や通知等のタブには作用しない。
+- `explore_trending_only` の初期値、従来の`hide_trends`の優先関係、日英文字列、ホームのおすすめ非表示、起動時フォロー中、TIPA梱包は維持。
+- 公式X更新で並びが変わると危険なため、12.38.1**以外ではこの位置ベースの処理を作動させない**。更新監視タスクが新ベースを取り込む時は再検証必須。
+- **検証状態:** バイナリ上のクラス/セレクタ確認あり。ビルド成功は実機UI成功を保証しない。端末でカテゴリ1つ・内容がトレンド・検索機能・横スワイプを確認する必要あり。前版での2度の「変化なし」を未解決履歴として残す。
+- 作業ブランチ: `automation/upstream-v7-work-20261105-explore-v739`。診断ブランチ `automation/inspect-upstream-explore-real-tabs-20261105`。
+
+---
+
 ## 0. ローカル修正（2026-11-05、7.3.8）— 探索画面「トレンドのみ表示」再修正
 
 - **ユーザー実機:** 7.3.7をインストールして設定しても表示に変化がなかった。7.3.7のコンストラクタ時フィルタはカテゴリ名がObjective-Cとして取り出せない場合などに無効化される（fail-open）。実際の原因を示す実機ログは未取得。
