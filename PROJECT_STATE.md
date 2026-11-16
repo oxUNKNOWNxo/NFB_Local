@@ -1,12 +1,20 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-11-16 (JST)
+最終更新: 2026-11-17 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
 
 ---
 
+
+## 0. 2026-11-17 上流追従（NFB_Local 7.3.11 / NeoFreeBird v7.3.1）
+
+- Public状態を維持。main基準 `e2f2dbd606b2c8710fdbd8e27bbdf06d6e1c2767`、前回上流 `bc410a0d11fa73416c5a7ea0657a5e564c414822`、今回上流 `d6b2bbfd438efbf20d056dfe0405547885a24be8`。公式release v7.3.1、ベースTwitter 12.39は変更なし。
+- 上流差分は `layout/Library/Application Support/BHT/BHTwitter.bundle/zh_CN.lproj/Localizable.strings` への10行追加のみ。`Sync upstream source` run `43982923748` による3-way同期成功・競合なし。HomeBars/AppLifecycle/Settings/HideUI、ローカル日本語訳、Package/Promote workflowは変更なし。
+- ローカル版を7.3.11へ更新。翻訳検証、Package/Promote結果はActionsを参照。実機検証は未実施。公開状態を勝手に変更しない。
+
+---
 
 ## 0. 2026-11-16 上流追従（NFB_Local 7.3.10 / NeoFreeBird v7.3.1）
 
