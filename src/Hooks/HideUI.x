@@ -127,7 +127,11 @@ static BOOL NFBIsCurrentExploreTabCollection(id collection) {
 
     NSString* hostVersion =
         [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"];
-    if (![hostVersion isEqualToString:@"12.38.1"]) {
+    // Both supported host versions expose the same Explore collection and
+    // segmented data-source selectors. The server-provided tab order still
+    // needs device verification on 12.39, so this remains opt-in.
+    if (![hostVersion isEqualToString:@"12.38.1"] &&
+        ![hostVersion isEqualToString:@"12.39"]) {
         return NO;
     }
 
