@@ -16,7 +16,7 @@
 - 日本語はローカル既存訳を維持し、新たな返信送信通知・投稿を開く・閉じるの3キーを追加。上流との重複 `TRANSLATOR_PAGE_SECTION_HEADER_TITLE` / `IPAD_SPLIT_VIEW_TITLE` / `IPAD_SPLIT_VIEW_DETAIL` は、ローカル側表現を残し重複を除去。
 - `Branding.x` は、本家が追加した `handlingTerminologyLocalization` 再帰ガードと `BHTTerminology` の新しい置換方式に、ローカル独自の `TwitterHostLocalizationFallbackForKey`（日本語リソースキー補完）を統合。X側の文字列取得機能を失わせないための修正。
 - `HomeBars.x` は本家によるメディアプレビュー制御追加のみで、`hide_for_you_tab`、起動時Following、固定・カスタムタイムライン維持のローカル処理は保持。`AppLifecycle.x`、`Settings.x`、`HideUI.x`、`Makefile` と Package/Promote の信頼境界Workflowは同期時変更なし。
-- run `42430653430` attempt 3 のX 12.39 Home selector検査は成功。ホーム関連の必要なセレクタを確認。`explore_trending_only` は7.3.9でX 12.38.1限定の安全ガードを持つため、**12.39の探索画面構造を別途検証し、無根拠に有効化しないこと**。
+- run `42430653430` attempt 3 のX 12.39 Home selector検査は成功。Home関連セレクタ確認済み。追加検査 run `43833519405` では、X 12.39でも `T1TwitterSwift.URTChromeViewController`・`T1URTGenericViewControllerCollection`、`delegate` および `numberOfTabsIn:` / `segmentedViewController:descriptorAtIndex:` / `pageViewControllerAtIndex:` / `didSelect...` が存在することを `nm` と ObjCメタデータから確認した（logの一部 `MISSING` は `strings | grep -q` と `pipefail` による破断判定であり、実際にはnmが明確にメソッドを列挙）。したがって `explore_trending_only` のバージョンガードを **12.38.1 と 12.39** に拡張。ただし元インデックス1＝トレンドの画面順は12.38.1のユーザー画像が基準であり、12.39での**画面順と実機機能の確認は未実施**。誤った表示ならこの設定をオフにすること。
 - 検証結果、ready branch、Private/Public Release、Package/Promote、最終main SHAは各Actions結果を参照。ビルド成功と端末上の実機検証は区別する。
 
 ---
