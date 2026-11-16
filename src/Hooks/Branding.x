@@ -210,38 +210,29 @@ static NSString* TwitterHostLocalizationFallbackForKey(NSString* key) {
 - (NSString*)localizedStringForKey:(NSString*)key
                              value:(NSString*)value
                              table:(NSString*)tableName {
-<<<<<<< /tmp/tmp.MH94Z4UoXQ
-    NSString* result = %orig;
-    NSBundle* tweakBundle = [BHTBundle sharedBundle].mainBundle;
-
-    // A valid localized result must not be the key itself. X 12.33 can hit this
-    // path for composition-complete toasts and their action/dismiss labels even
-    // though the Japanese strings are present in the app. Recover the official
-    // value before applying optional Twitter terminology restoration.
-    if (self != tweakBundle && key.length > 0 &&
-        (result.length == 0 || [result isEqualToString:key])) {
-        NSString* fallback = TwitterHostLocalizationFallbackForKey(key);
-        if (fallback.length > 0) {
-            result = fallback;
-        }
-    }
-
-    if (![BHTSettings boolForKey:@"restore_twitter_names"] ||
-        self == tweakBundle) {
-        return result;
-    }
-=======
     if (handlingTerminologyLocalization) {
         return %orig;
     }
     handlingTerminologyLocalization = YES;
     @try {
         NSString* result = %orig;
+        NSBundle* tweakBundle = [BHTBundle sharedBundle].mainBundle;
+
+        // Preserve the local host-string fallback before optional renaming:
+        // some Japanese X UI strings otherwise show raw resource keys.
+        // The recursion guard also protects terminology table initialization.
+        if (self != tweakBundle && key.length > 0 &&
+            (result.length == 0 || [result isEqualToString:key])) {
+            NSString* fallback = TwitterHostLocalizationFallbackForKey(key);
+            if (fallback.length > 0) {
+                result = fallback;
+            }
+        }
+
         if (![BHTSettings boolForKey:@"restore_twitter_names"] ||
-            self == [BHTBundle sharedBundle].mainBundle) {
+            self == tweakBundle) {
             return result;
         }
->>>>>>> /tmp/tmp.rS7gvCQK1X
 
         NSString* override = key ? RenameKeyOverrides()[key] : nil;
         if (override) {
