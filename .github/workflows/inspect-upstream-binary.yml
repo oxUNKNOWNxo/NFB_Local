@@ -149,6 +149,35 @@ jobs:
             exit 1
           fi
 
+      - name: Inspect Explore tab API for Twitter 12.39
+        run: |
+          set -euo pipefail
+          BIN="$APP/Frameworks/T1Twitter.framework/T1Twitter"
+          test -f "$BIN"
+          echo "=== Version ==="
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist"
+          echo "=== Named classes ==="
+          for symbol in URTChromeViewController GuideContainerViewController T1URTGenericViewControllerCollection LegacySegmentedViewController; do
+            if strings -a "$BIN" | grep -q -F "$symbol"; then
+              echo "PASS class: $symbol"
+            else
+              echo "MISSING class: $symbol"
+            fi
+          done
+          echo "=== Explore and generic collection ObjC selectors ==="
+          nm -a "$BIN" 2>/dev/null | xcrun swift-demangle 2>/dev/null | grep -E 'T1URTGenericViewControllerCollection|URTChromeViewController.*(viewDidLoad|genericViewControllerCollection|dataSource)' | head -n 80 || true
+          echo "=== Source field and selector checks ==="
+          for symbol in 'selectedTabID' 'contentTabs' 'numberOfTabsIn:' 'segmentedViewController:descriptorAtIndex:' 'segmentedViewController:pageViewControllerAtIndex:' 'genericViewControllerCollectionWithDidSelectContentViewController:at:indexChanged:'; do
+            if strings -a "$BIN" | grep -q -F "$symbol"; then
+              echo "PASS token: $symbol"
+            else
+              echo "MISSING token: $symbol"
+            fi
+          done
+          echo "=== Collection delegate and selector metadata ==="
+          otool -ov "$BIN" > /tmp/nfb-v731-explore-objc.txt
+          grep -n -A 52 -F '_OBJC_CLASS_$_T1URTGenericViewControllerCollection' /tmp/nfb-v731-explore-objc.txt | head -n 62 || true
+
       - name: Upload inspection report
         if: always()
         uses: actions/upload-artifact@v7
