@@ -1,0 +1,2 @@
+layout/Library/Application Support/BHT/BHTwitter.bundle/ja.lproj/Localizable.strings
+src/Hooks/Branding.x
