@@ -1,9 +1,23 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-11-05 (JST)
+最終更新: 2026-11-16 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+
+## 0. 2026-11-16 上流追従（NFB_Local 7.3.10 / NeoFreeBird v7.3.1）
+
+- ユーザーは GitHub Actions のprivate-repository利用枠を使い切ったため、`oxUNKNOWNxo/NFB_Local` を**自らPublicに変更**。2026-11-16にGitHub接続から `visibility=public` を確認。**自動でprivateへ戻さず、意図しないリポジトリ可視性変更を行わない。** PublicではソースとReleaseも外部から参照可能になる点に注意。
+- 基準はmain `4f80e0b9e35b2732e2566f986d4e5afe8571c89b` (7.3.9)、公式取り込み済み上流 `e6dedd455b10732fa3bf475b495946969be71a91`。新しい公式 `v7` HEAD `bc410a0d11fa73416c5a7ea0657a5e564c414822`、28コミット分。リリース v7.3.1、ベースTwitter 12.39。
+- GitHub Actionsの以前のジョブはランナー未割当（ステップ0件・数秒でfailure）。Public変更後にrun `43333504967` を再実行（attempt 3）し、ランナーが起動、3-way同期が完了。競合は `ja.lproj/Localizable.strings`、`src/Hooks/Branding.x` の2件。作業ブランチは `automation/upstream-v7-work-20261113-v7-head` を継続利用。
+- 日本語はローカル既存訳を維持し、新たな返信送信通知・投稿を開く・閉じるの3キーを追加。上流との重複 `TRANSLATOR_PAGE_SECTION_HEADER_TITLE` / `IPAD_SPLIT_VIEW_TITLE` / `IPAD_SPLIT_VIEW_DETAIL` は、ローカル側表現を残し重複を除去。
+- `Branding.x` は、本家が追加した `handlingTerminologyLocalization` 再帰ガードと `BHTTerminology` の新しい置換方式に、ローカル独自の `TwitterHostLocalizationFallbackForKey`（日本語リソースキー補完）を統合。X側の文字列取得機能を失わせないための修正。
+- `HomeBars.x` は本家によるメディアプレビュー制御追加のみで、`hide_for_you_tab`、起動時Following、固定・カスタムタイムライン維持のローカル処理は保持。`AppLifecycle.x`、`Settings.x`、`HideUI.x`、`Makefile` と Package/Promote の信頼境界Workflowは同期時変更なし。
+- run `42430653430` attempt 3 のX 12.39 Home selector検査は成功。ホーム関連の必要なセレクタを確認。`explore_trending_only` は7.3.9でX 12.38.1限定の安全ガードを持つため、**12.39の探索画面構造を別途検証し、無根拠に有効化しないこと**。
+- 検証結果、ready branch、Private/Public Release、Package/Promote、最終main SHAは各Actions結果を参照。ビルド成功と端末上の実機検証は区別する。
 
 ---
 
