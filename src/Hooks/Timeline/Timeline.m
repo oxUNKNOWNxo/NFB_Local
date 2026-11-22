@@ -1,60 +1,4 @@
-//
-//  Timeline.x
-//  NeoFreeBird
-//
-
-#import <string.h>
-#import "HookHelpers.h"
-
-// MARK: - Hide "Discover more", who-to-follow and prompts
-
-// Resolves the class by name so mangled Swift names work; NSStringFromClass
-// would only ever produce the demangled dotted form.
-static BOOL IsInHierarchyOfClass(UIViewController* viewController, NSString* className) {
-    Class targetClass = NSClassFromString(className);
-    if (!targetClass) {
-        return NO;
-    }
-
-    UIViewController* currentVC = viewController;
-
-    while (currentVC) {
-        if ([currentVC isKindOfClass:targetClass]) {
-            return YES;
-        }
-
-        if (currentVC.parentViewController) {
-            currentVC = currentVC.parentViewController;
-        } else if (currentVC.navigationController) {
-            currentVC = currentVC.navigationController;
-        } else if (currentVC.presentingViewController) {
-            currentVC = currentVC.presentingViewController;
-        } else {
-            break;
-        }
-    }
-
-    return NO;
-}
-
-// Need to tag edit history since it reuses a generic class
-static const void* EditHistoryViewControllerKey = &EditHistoryViewControllerKey;
-
-static BOOL IsInEditHistory(UIViewController* viewController) {
-    UIViewController* currentVC = viewController;
-
-    while (currentVC) {
-        if (objc_getAssociatedObject(currentVC, EditHistoryViewControllerKey)) {
-            return YES;
-        }
-
-        currentVC = currentVC.parentViewController;
-    }
-
-    return NO;
-}
-
-static const void* ConversationOpenedFromProfileKey = &ConversationOpenedFromProfileKey;
+#import "Timeline.h"
 
 static BOOL StringSuggestsProfile(id value) {
     if (![value isKindOfClass:[NSString class]]) {
@@ -63,129 +7,6 @@ static BOOL StringSuggestsProfile(id value) {
 
     return [[(NSString*)value lowercaseString] containsString:@"profile"];
 }
-
-static id ObjectForSelector(id object, SEL selector) {
-    return ((id (*)(id, SEL))objc_msgSend)(object, selector);
-}
-
-static BOOL NavigationMetadataIsFromProfile(id metadata) {
-    if (!metadata) {
-        return NO;
-    }
-
-    if ([metadata respondsToSelector:@selector(name)] &&
-        StringSuggestsProfile(ObjectForSelector(metadata, @selector(name)))) {
-        return YES;
-    }
-
-    id scribeContext = nil;
-    if ([metadata respondsToSelector:@selector(sourceScribeContext)]) {
-        scribeContext = ObjectForSelector(metadata, @selector(sourceScribeContext));
-    }
-
-    for (NSUInteger depth = 0; scribeContext && depth < 8; depth++) {
-        NSArray<NSString*>* selectors = @[@"page", @"section", @"component", @"element"];
-        for (NSString* selectorName in selectors) {
-            SEL selector = NSSelectorFromString(selectorName);
-            if ([scribeContext respondsToSelector:selector] &&
-                StringSuggestsProfile(ObjectForSelector(scribeContext, selector))) {
-                return YES;
-            }
-        }
-
-        if (![scribeContext respondsToSelector:@selector(sourceContext)]) {
-            break;
-        }
-        scribeContext = ObjectForSelector(scribeContext, @selector(sourceContext));
-    }
-
-    return NO;
-}
-
-static BOOL IsInProfileOriginConversation(UIViewController* viewController) {
-    UIViewController* currentVC = viewController;
-
-    while (currentVC) {
-        if (objc_getAssociatedObject(currentVC, ConversationOpenedFromProfileKey)) {
-            return YES;
-        }
-
-        if (currentVC.parentViewController) {
-            currentVC = currentVC.parentViewController;
-        } else if (currentVC.navigationController) {
-            currentVC = currentVC.navigationController;
-        } else if (currentVC.presentingViewController) {
-            currentVC = currentVC.presentingViewController;
-        } else {
-            break;
-        }
-    }
-
-    return NO;
-}
-
-%hook T1ConversationContainerViewController
-
-- (id)initWithAccount:(id)account
-                         statusID:(long long)statusID
-          statusNavigationContext:(id)statusNavigationContext
-                    scribeContext:(id)scribeContext
-         sourceNavigationMetadata:(id)sourceNavigationMetadata
-       overrideNavigationMetadata:(id)overrideNavigationMetadata
-      shouldIncludeReferrerParams:(BOOL)shouldIncludeReferrerParams
-    shouldStartQuickPromoteOnOpen:(BOOL)shouldStartQuickPromoteOnOpen
-                excludedStatusIDs:(id)excludedStatusIDs {
-    id conversation = %orig(account, statusID, statusNavigationContext, scribeContext,
-                                sourceNavigationMetadata, overrideNavigationMetadata,
-                                shouldIncludeReferrerParams, shouldStartQuickPromoteOnOpen,
-                                excludedStatusIDs);
-    if (conversation && NavigationMetadataIsFromProfile(sourceNavigationMetadata)) {
-        objc_setAssociatedObject(conversation, ConversationOpenedFromProfileKey, @YES,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-
-    return conversation;
-}
-
-- (id)initWithAccount:(id)account
-                        viewModel:(id)viewModel
-          statusNavigationContext:(id)statusNavigationContext
-                    scribeContext:(id)scribeContext
-         sourceNavigationMetadata:(id)sourceNavigationMetadata
-       overrideNavigationMetadata:(id)overrideNavigationMetadata
-      shouldIncludeReferrerParams:(BOOL)shouldIncludeReferrerParams
-    shouldNotifyDisplayLatestEdit:(BOOL)shouldNotifyDisplayLatestEdit
-    shouldStartQuickPromoteOnOpen:(BOOL)shouldStartQuickPromoteOnOpen
-                excludedStatusIDs:(id)excludedStatusIDs {
-    id conversation = %orig(account, viewModel, statusNavigationContext, scribeContext,
-                                sourceNavigationMetadata, overrideNavigationMetadata,
-                                shouldIncludeReferrerParams, shouldNotifyDisplayLatestEdit,
-                                shouldStartQuickPromoteOnOpen, excludedStatusIDs);
-    if (conversation && NavigationMetadataIsFromProfile(sourceNavigationMetadata)) {
-        objc_setAssociatedObject(conversation, ConversationOpenedFromProfileKey, @YES,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-
-    return conversation;
-}
-
-%end
-
-%hook T1EditHistoryViewControllerFactory
-
-+ (id)viewControllerWithAccount:(id)account
-                        tweetID:(unsigned long long)tweetID
-                  scribeContext:(id)scribeContext {
-    id viewController = %orig;
-    if (viewController) {
-        objc_setAssociatedObject(viewController, EditHistoryViewControllerKey, @YES,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-
-    return viewController;
-}
-
-%end
 
 static NSString* ItemEntryID(id viewModel) {
     if (![viewModel respondsToSelector:@selector(entryID)]) {
@@ -278,12 +99,6 @@ static long long CurrentAccountUserID(void) {
     return ((long long (*)(id, SEL))objc_msgSend)(account, @selector(userID));
 }
 
-// Twitter's *ByCurrentAccountState fields are a tri-state (0 unknown, 1 yes,
-// 2 no); if follows still get hidden, flip this to the value logged for a
-// known-followed account.
-static const NSInteger kFollowedByCurrentAccountStateFollowing = 1;
-static const NSInteger kBlockingCurrentAccountStateBlocking = 1;
-
 static BOOL UserBlocksCurrentAccount(id user) {
     SEL relationshipSelector = @selector(relationship);
     if (![user respondsToSelector:relationshipSelector]) {
@@ -341,47 +156,6 @@ static BOOL ItemIsRetweet(id viewModel) {
 
     return YES;
 }
-
-// Everything the per-item filters need to know about one section update: which
-// hide toggles are on, which screen the timeline is being shown on, and the
-// conversation lookups those two imply. Adding a filter or a surface means
-// adding a property here, a line in +contextForDataViewController: and a line
-// in -isEqualToContext:, instead of another argument threaded through every
-// function in this section.
-@interface BHTimelineFilterContext : NSObject
-
-// Hide toggles, already resolved against the surface — hideVerified stays off
-// in profiles and search, where seeing the account that was looked up is the
-// whole point of being there.
-@property (nonatomic) BOOL hideWhoToFollow;
-@property (nonatomic) BOOL hidePrompts;
-@property (nonatomic) BOOL hideVerified;
-@property (nonatomic) BOOL hideQuoteTweets;
-@property (nonatomic) BOOL hideRetweets;
-@property (nonatomic) BOOL hideBlockedRetweets;
-
-// Surfaces.
-@property (nonatomic) BOOL inConversation;
-@property (nonatomic) BOOL inProfile;
-@property (nonatomic) BOOL openedFromProfile;
-@property (nonatomic) BOOL inSearch;
-@property (nonatomic) BOOL inEditHistory;
-@property (nonatomic) BOOL inNotifications;
-
-// Conversation lookups, filled in by -resolveConversationLookupsInSections:
-// once per section update and only when hiding verified replies needs them.
-@property (nonatomic) long long conversationRootUserID;
-@property (nonatomic, copy) NSSet<NSNumber*>* authorRepliedToUserIDs;
-
-// NO when nothing in this context can hide anything, so the sections can be
-// handed back untouched.
-@property (nonatomic, readonly) BOOL shouldFilter;
-
-+ (instancetype)contextForDataViewController:(TFNItemsDataViewController*)dataViewController;
-- (void)resolveConversationLookupsInSections:(NSArray*)sections;
-- (BOOL)isEqualToContext:(BHTimelineFilterContext*)other;
-
-@end
 
 static BOOL BHShouldHideVerifiedItem(id viewModel, BHTimelineFilterContext* context) {
     SEL verifiedSelector = @selector(isFromUserVerified);
@@ -529,7 +303,142 @@ static BOOL MemoizedShouldHideTimelineItem(id item, NSCache<NSString*, NSNumber*
     return hide;
 }
 
-static long long ConversationRootUserID(NSArray* sections) {
+// The server sends the carousel as one timeline entry, but the app expands it
+// into separate header/content/footer view models. Drop the entry from the
+// GraphQL response so the whole module never reaches that expansion.
+BOOL IsGraphQLResponse(NSURL* url) {
+    return [url.path.pathComponents containsObject:@"graphql"];
+}
+
+id RemoveVideoCarouselEntries(id node, BOOL* removed) {
+    if ([node isKindOfClass:[NSArray class]]) {
+        NSMutableArray* kept = [NSMutableArray array];
+        for (id value in (NSArray*)node) {
+            id entryID = [value isKindOfClass:[NSDictionary class]] ? value[@"entry_id"] : nil;
+            if ([entryID isKindOfClass:[NSString class]] &&
+                [entryID hasPrefix:@"video-carousel-"]) {
+                *removed = YES;
+                continue;
+            }
+
+            [kept addObject:RemoveVideoCarouselEntries(value, removed)];
+        }
+        return kept;
+    }
+
+    if ([node isKindOfClass:[NSDictionary class]]) {
+        NSMutableDictionary* copy = [node mutableCopy];
+        for (NSString* key in node) {
+            copy[key] = RemoveVideoCarouselEntries(node[key], removed);
+        }
+        return copy;
+    }
+
+    return node;
+}
+
+// Resolves the class by name so mangled Swift names work; NSStringFromClass
+// would only ever produce the demangled dotted form.
+BOOL IsInHierarchyOfClass(UIViewController* viewController, NSString* className) {
+    Class targetClass = NSClassFromString(className);
+    if (!targetClass) {
+        return NO;
+    }
+
+    UIViewController* currentVC = viewController;
+
+    while (currentVC) {
+        if ([currentVC isKindOfClass:targetClass]) {
+            return YES;
+        }
+
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+
+    return NO;
+}
+
+// Need to tag edit history since it reuses a generic class
+
+BOOL IsInEditHistory(UIViewController* viewController) {
+    UIViewController* currentVC = viewController;
+
+    while (currentVC) {
+        if (objc_getAssociatedObject(currentVC, EditHistoryViewControllerKey)) {
+            return YES;
+        }
+
+        currentVC = currentVC.parentViewController;
+    }
+
+    return NO;
+}
+
+BOOL NavigationMetadataIsFromProfile(id metadata) {
+    if (!metadata) {
+        return NO;
+    }
+
+    if ([metadata respondsToSelector:@selector(name)] &&
+        StringSuggestsProfile(ObjectForSelector(metadata, @selector(name)))) {
+        return YES;
+    }
+
+    id scribeContext = nil;
+    if ([metadata respondsToSelector:@selector(sourceScribeContext)]) {
+        scribeContext = ObjectForSelector(metadata, @selector(sourceScribeContext));
+    }
+
+    for (NSUInteger depth = 0; scribeContext && depth < 8; depth++) {
+        NSArray<NSString*>* selectors = @[@"page", @"section", @"component", @"element"];
+        for (NSString* selectorName in selectors) {
+            SEL selector = NSSelectorFromString(selectorName);
+            if ([scribeContext respondsToSelector:selector] &&
+                StringSuggestsProfile(ObjectForSelector(scribeContext, selector))) {
+                return YES;
+            }
+        }
+
+        if (![scribeContext respondsToSelector:@selector(sourceContext)]) {
+            break;
+        }
+        scribeContext = ObjectForSelector(scribeContext, @selector(sourceContext));
+    }
+
+    return NO;
+}
+
+BOOL IsInProfileOriginConversation(UIViewController* viewController) {
+    UIViewController* currentVC = viewController;
+
+    while (currentVC) {
+        if (objc_getAssociatedObject(currentVC, ConversationOpenedFromProfileKey)) {
+            return YES;
+        }
+
+        if (currentVC.parentViewController) {
+            currentVC = currentVC.parentViewController;
+        } else if (currentVC.navigationController) {
+            currentVC = currentVC.navigationController;
+        } else if (currentVC.presentingViewController) {
+            currentVC = currentVC.presentingViewController;
+        } else {
+            break;
+        }
+    }
+
+    return NO;
+}
+
+long long ConversationRootUserID(NSArray* sections) {
     for (id section in sections) {
         if (![section isKindOfClass:[NSArray class]]) {
             continue;
@@ -551,8 +460,8 @@ static long long ConversationRootUserID(NSArray* sections) {
     return 0;
 }
 
-static NSSet<NSNumber*>* ConversationAuthorRepliedToUserIDs(NSArray* sections,
-                                                            long long rootUserID) {
+NSSet<NSNumber*>* ConversationAuthorRepliedToUserIDs(NSArray* sections,
+                                                     long long rootUserID) {
     NSMutableSet<NSNumber*>* repliedToUserIDs = [NSMutableSet set];
     if (rootUserID == 0) {
         return repliedToUserIDs;
@@ -583,75 +492,8 @@ static NSSet<NSNumber*>* ConversationAuthorRepliedToUserIDs(NSArray* sections,
     return repliedToUserIDs;
 }
 
-@implementation BHTimelineFilterContext
-
-+ (instancetype)contextForDataViewController:(TFNItemsDataViewController*)dataViewController {
-    BHTimelineFilterContext* context = [self new];
-
-    context.inConversation =
-        IsInHierarchyOfClass(dataViewController, @"T1ConversationContainerViewController");
-    context.inProfile = IsInHierarchyOfClass(dataViewController, @"T1ProfileViewController");
-    context.openedFromProfile = IsInProfileOriginConversation(dataViewController);
-    context.inSearch = IsInHierarchyOfClass(dataViewController, @"TTSSearchContainerViewControllerV2") || IsInHierarchyOfClass(dataViewController, @"TTSSearchContainerViewController");
-    context.inEditHistory = IsInEditHistory(dataViewController);
-    context.inNotifications = IsInHierarchyOfClass(dataViewController, @"T1NotificationsViewController");
-
-    context.hideWhoToFollow = [BHTSettings boolForKey:@"hide_who_to_follow"];
-    context.hidePrompts = [BHTSettings boolForKey:@"hide_timeline_prompts"];
-    context.hideVerified = [BHTSettings boolForKey:@"hide_verified_tweets"] &&
-                           !context.inProfile && !context.inSearch && !context.inEditHistory;
-    context.hideBlockedRetweets = [BHTSettings boolForKey:@"hide_blocked_retweets"];
-    BOOL inPostInteractions =
-        IsInHierarchyOfClass(dataViewController, @"T1PostInteractionsViewController");
-    BOOL openedTweetFromProfile = context.inProfile || context.openedFromProfile;
-    context.hideQuoteTweets = [BHTSettings boolForKey:@"hide_quote_tweets"] &&
-                              !inPostInteractions && !openedTweetFromProfile;
-    context.hideRetweets = [BHTSettings boolForKey:@"hide_retweets"] &&
-                           !inPostInteractions && !openedTweetFromProfile;
-
-    return context;
-}
-
-- (BOOL)shouldFilter {
-    return self.hideWhoToFollow || self.hidePrompts || self.hideVerified ||
-           self.hideQuoteTweets || self.hideRetweets || self.hideBlockedRetweets || self.inConversation;
-}
-
-- (void)resolveConversationLookupsInSections:(NSArray*)sections {
-    if (!self.hideVerified || !self.inConversation) {
-        self.conversationRootUserID = 0;
-        self.authorRepliedToUserIDs = nil;
-        return;
-    }
-
-    self.conversationRootUserID = ConversationRootUserID(sections);
-    self.authorRepliedToUserIDs =
-        ConversationAuthorRepliedToUserIDs(sections, self.conversationRootUserID);
-}
-
-- (BOOL)isEqualToContext:(BHTimelineFilterContext*)other {
-    if (!other) {
-        return NO;
-    }
-
-    return self.hideWhoToFollow == other.hideWhoToFollow &&
-           self.hidePrompts == other.hidePrompts && self.hideVerified == other.hideVerified &&
-           self.hideBlockedRetweets == other.hideBlockedRetweets &&
-           self.inConversation == other.inConversation && self.inProfile == other.inProfile &&
-           self.openedFromProfile == other.openedFromProfile &&
-           self.inSearch == other.inSearch &&
-           self.hideQuoteTweets == other.hideQuoteTweets &&
-           self.hideRetweets == other.hideRetweets &&
-           self.conversationRootUserID == other.conversationRootUserID &&
-           self.inEditHistory == other.inEditHistory &&
-           (self.authorRepliedToUserIDs == other.authorRepliedToUserIDs ||
-            [self.authorRepliedToUserIDs isEqualToSet:other.authorRepliedToUserIDs]);
-}
-
-@end
-
-static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewController,
-                                         NSArray* sections) {
+NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewController,
+                                  NSArray* sections) {
     BHTimelineFilterContext* context =
         [BHTimelineFilterContext contextForDataViewController:dataViewController];
     if (!context.shouldFilter) {
@@ -698,80 +540,3 @@ static NSArray* FilteredTimelineSections(TFNItemsDataViewController* dataViewCon
 
     return modified ? [filteredSections copy] : sections;
 }
-
-// MARK: - Videos for you module
-
-// The server sends the carousel as one timeline entry, but the app expands it
-// into separate header/content/footer view models. Drop the entry from the
-// GraphQL response so the whole module never reaches that expansion.
-static BOOL IsGraphQLResponse(NSURL* url) {
-    return [url.path.pathComponents containsObject:@"graphql"];
-}
-
-static id RemoveVideoCarouselEntries(id node, BOOL* removed) {
-    if ([node isKindOfClass:[NSArray class]]) {
-        NSMutableArray* kept = [NSMutableArray array];
-        for (id value in (NSArray*)node) {
-            id entryID = [value isKindOfClass:[NSDictionary class]] ? value[@"entry_id"] : nil;
-            if ([entryID isKindOfClass:[NSString class]] &&
-                [entryID hasPrefix:@"video-carousel-"]) {
-                *removed = YES;
-                continue;
-            }
-
-            [kept addObject:RemoveVideoCarouselEntries(value, removed)];
-        }
-        return kept;
-    }
-
-    if ([node isKindOfClass:[NSDictionary class]]) {
-        NSMutableDictionary* copy = [node mutableCopy];
-        for (NSString* key in node) {
-            copy[key] = RemoveVideoCarouselEntries(node[key], removed);
-        }
-        return copy;
-    }
-
-    return node;
-}
-
-%hook TNLResponseInfo
-
-- (instancetype)initWithFinalURLRequest:(NSURLRequest*)request
-                            URLResponse:(NSURLResponse*)response
-                                 source:(NSInteger)source
-                                   data:(NSData*)data
-                     temporarySavedFile:(id)temporarySavedFile {
-    if ([BHTSettings boolForKey:@"hide_videos_for_you"] && data &&
-        IsGraphQLResponse(request.URL)) {
-        NSData* marker = [@"video-carousel-" dataUsingEncoding:NSUTF8StringEncoding];
-        if ([data rangeOfData:marker options:0 range:NSMakeRange(0, data.length)].location !=
-            NSNotFound) {
-            id json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-            BOOL removed = NO;
-            id filtered = json ? RemoveVideoCarouselEntries(json, &removed) : nil;
-            if (removed) {
-                data = [NSJSONSerialization dataWithJSONObject:filtered options:0 error:nil] ?: data;
-            }
-        }
-    }
-
-    return %orig(request, response, source, data, temporarySavedFile);
-}
-
-%end
-
-%hook TFNItemsDataViewController
-
-- (void)setSections:(NSArray*)sections restoreScrollPosition:(BOOL)restoreScrollPosition {
-    %orig(FilteredTimelineSections(self, sections), restoreScrollPosition);
-}
-
-- (void)updateSections:(NSArray*)sections
-    reconfigureItemIdentifiers:(NSArray*)identifiers
-              withRowAnimation:(long long)animation
-                    completion:(id)completion {
-    %orig(FilteredTimelineSections(self, sections), identifiers, animation, completion);
-}
-
-%end

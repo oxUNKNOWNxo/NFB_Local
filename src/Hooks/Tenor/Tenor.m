@@ -1,160 +1,4 @@
-// Tenor.x
-// Made by orionblur
-//
-// Swaps the GIF picker's GIPHY-backed catalogue for Tenor's.
-//
-
-#import "HookHelpers.h"
-
-// MARK: - Constants
-
-static NSString* const TenorAPIBase = @"https://api.tenor.com/v1";
-static NSString* const TenorAPIKey = @"3Z0688EVWYKH";
-static NSString* const TenorContentFilter = @"medium";
-static NSString* const TenorMediaFilter = @"default";
-static NSUInteger const TenorResultLimit = 50;
-static NSTimeInterval const TenorRequestTimeout = 15.0;
-static NSUInteger const TenorMaxUploadBytes = 15 * 1024 * 1024;
-
-static NSString* const GifItemTypename = @"GifItemData";
-static NSString* const GifImageTypename = @"GifImage";
-static NSString* const GifSliceTypename = @"GifSlice";
-static NSString* const GifCategoryTypename = @"GifCategory";
-static NSString* const GifCategorySliceTypename = @"GifCategorySlice";
-
-static NSString* const TenorPassThroughKey = @"BHTTenorPassThrough";
-
-// The three operations the GIF picker issues, identified by the trailing path
-// component of the persisted-query URL.
-typedef NS_ENUM(NSUInteger, BHTGifOperation) {
-    BHTGifOperationNone = 0,
-    BHTGifOperationSearch,     // GifSearchQuery(query:, image_format:)
-    BHTGifOperationCategory,   // GifEnumerateCategoryQuery(category:, image_format:)
-    BHTGifOperationCategories, // GifCategoriesQuery(image_format:)
-};
-
-// MARK: - Request inspection
-
-static BHTGifOperation operationForRequest(NSURLRequest* request) {
-    NSString* path = request.URL.path;
-    if (path.length == 0) {
-        return BHTGifOperationNone;
-    }
-
-    if ([path hasSuffix:@"/GifSearchQuery"]) {
-        return BHTGifOperationSearch;
-    }
-    if ([path hasSuffix:@"/GifEnumerateCategoryQuery"]) {
-        return BHTGifOperationCategory;
-    }
-    if ([path hasSuffix:@"/GifCategoriesQuery"]) {
-        return BHTGifOperationCategories;
-    }
-    return BHTGifOperationNone;
-}
-
-static NSDictionary* variablesFromRequest(NSURLRequest* request) {
-    NSURLComponents* components = [NSURLComponents componentsWithURL:request.URL
-                                             resolvingAgainstBaseURL:NO];
-    for (NSURLQueryItem* item in components.queryItems) {
-        if (![item.name isEqualToString:@"variables"] || item.value.length == 0) {
-            continue;
-        }
-
-        NSData* data = [item.value dataUsingEncoding:NSUTF8StringEncoding];
-        id json = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
-        if ([json isKindOfClass:[NSDictionary class]]) {
-            return json;
-        }
-    }
-
-    NSData* body = request.HTTPBody;
-    id json = body ? [NSJSONSerialization JSONObjectWithData:body options:0 error:nil] : nil;
-    if (![json isKindOfClass:[NSDictionary class]]) {
-        return nil;
-    }
-
-    id variables = json[@"variables"];
-    return [variables isKindOfClass:[NSDictionary class]] ? variables : json;
-}
-
-static NSString* stringValue(id value) {
-    if ([value isKindOfClass:[NSString class]]) {
-        return ((NSString*)value).length ? value : nil;
-    }
-    if ([value isKindOfClass:[NSNumber class]]) {
-        return ((NSNumber*)value).stringValue;
-    }
-    return nil;
-}
-
-// MARK: - Tenor requests
-
-static NSURL* tenorURL(NSString* path, NSDictionary<NSString*, NSString*>* extraParameters) {
-    NSURLComponents* components =
-        [NSURLComponents componentsWithString:[TenorAPIBase stringByAppendingString:path]];
-    if (!components) {
-        return nil;
-    }
-
-    NSMutableArray<NSURLQueryItem*>* items = [NSMutableArray array];
-    [items addObject:[NSURLQueryItem queryItemWithName:@"key" value:TenorAPIKey]];
-    [items addObject:[NSURLQueryItem queryItemWithName:@"locale"
-                                                 value:[[NSLocale currentLocale] localeIdentifier]]];
-    [items addObject:[NSURLQueryItem queryItemWithName:@"contentfilter" value:TenorContentFilter]];
-
-    for (NSString* name in extraParameters) {
-        [items addObject:[NSURLQueryItem queryItemWithName:name value:extraParameters[name]]];
-    }
-
-    components.queryItems = items;
-    return components.URL;
-}
-
-static NSURL* tenorURLForOperation(BHTGifOperation operation, NSDictionary* variables) {
-    NSString* limit = [@(TenorResultLimit) stringValue];
-
-    switch (operation) {
-        case BHTGifOperationSearch: {
-            NSString* query = stringValue(variables[@"query"]);
-            if (!query) {
-                return nil;
-            }
-            return tenorURL(@"/search", @{
-                @"q": query,
-                @"limit": limit,
-                @"media_filter": TenorMediaFilter,
-            });
-        }
-
-        case BHTGifOperationCategory: {
-            NSString* category = stringValue(variables[@"category"]);
-            if (!category) {
-                return nil;
-            }
-            if ([category caseInsensitiveCompare:@"trending"] == NSOrderedSame) {
-                return tenorURL(@"/trending", @{
-                    @"limit": limit,
-                    @"media_filter": TenorMediaFilter,
-                });
-            }
-            return tenorURL(@"/search", @{
-                @"q": category,
-                @"limit": limit,
-                @"media_filter": TenorMediaFilter,
-            });
-        }
-
-        case BHTGifOperationCategories:
-            return tenorURL(@"/categories", @{@"type": @"featured"});
-
-        case BHTGifOperationNone:
-            break;
-    }
-    return nil;
-}
-
-// MARK: - Tenor -> Apollo mapping
+#import "Tenor.h"
 
 static NSArray<NSString*>* fullImageKeys(void) {
     return @[@"gif", @"mediumgif", @"tinygif", @"nanogif"];
@@ -323,8 +167,137 @@ static NSData* gifCategoriesPayload(NSDictionary* tenorJSON) {
     });
 }
 
-static NSData* payloadForOperation(BHTGifOperation operation, NSData* tenorData,
-                                   NSString* format) {
+static NSArray<Class>* protocolClassesIncludingTenor(NSArray<Class>* existing) {
+    if ([existing containsObject:[BHTTenorURLProtocol class]]) {
+        return existing;
+    }
+
+    NSMutableArray<Class>* classes = existing ? [existing mutableCopy] : [NSMutableArray array];
+    [classes insertObject:[BHTTenorURLProtocol class] atIndex:0];
+    return classes;
+}
+
+BHTGifOperation operationForRequest(NSURLRequest* request) {
+    NSString* path = request.URL.path;
+    if (path.length == 0) {
+        return BHTGifOperationNone;
+    }
+
+    if ([path hasSuffix:@"/GifSearchQuery"]) {
+        return BHTGifOperationSearch;
+    }
+    if ([path hasSuffix:@"/GifEnumerateCategoryQuery"]) {
+        return BHTGifOperationCategory;
+    }
+    if ([path hasSuffix:@"/GifCategoriesQuery"]) {
+        return BHTGifOperationCategories;
+    }
+    return BHTGifOperationNone;
+}
+
+NSDictionary* variablesFromRequest(NSURLRequest* request) {
+    NSURLComponents* components = [NSURLComponents componentsWithURL:request.URL
+                                             resolvingAgainstBaseURL:NO];
+    for (NSURLQueryItem* item in components.queryItems) {
+        if (![item.name isEqualToString:@"variables"] || item.value.length == 0) {
+            continue;
+        }
+
+        NSData* data = [item.value dataUsingEncoding:NSUTF8StringEncoding];
+        id json = data ? [NSJSONSerialization JSONObjectWithData:data options:0 error:nil] : nil;
+        if ([json isKindOfClass:[NSDictionary class]]) {
+            return json;
+        }
+    }
+
+    NSData* body = request.HTTPBody;
+    id json = body ? [NSJSONSerialization JSONObjectWithData:body options:0 error:nil] : nil;
+    if (![json isKindOfClass:[NSDictionary class]]) {
+        return nil;
+    }
+
+    id variables = json[@"variables"];
+    return [variables isKindOfClass:[NSDictionary class]] ? variables : json;
+}
+
+NSString* stringValue(id value) {
+    if ([value isKindOfClass:[NSString class]]) {
+        return ((NSString*)value).length ? value : nil;
+    }
+    if ([value isKindOfClass:[NSNumber class]]) {
+        return ((NSNumber*)value).stringValue;
+    }
+    return nil;
+}
+
+// MARK: - Tenor requests
+
+NSURL* tenorURL(NSString* path, NSDictionary<NSString*, NSString*>* extraParameters) {
+    NSURLComponents* components =
+        [NSURLComponents componentsWithString:[TenorAPIBase stringByAppendingString:path]];
+    if (!components) {
+        return nil;
+    }
+
+    NSMutableArray<NSURLQueryItem*>* items = [NSMutableArray array];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"key" value:TenorAPIKey]];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"locale"
+                                                 value:[[NSLocale currentLocale] localeIdentifier]]];
+    [items addObject:[NSURLQueryItem queryItemWithName:@"contentfilter" value:TenorContentFilter]];
+
+    for (NSString* name in extraParameters) {
+        [items addObject:[NSURLQueryItem queryItemWithName:name value:extraParameters[name]]];
+    }
+
+    components.queryItems = items;
+    return components.URL;
+}
+
+NSURL* tenorURLForOperation(BHTGifOperation operation, NSDictionary* variables) {
+    NSString* limit = [@(TenorResultLimit) stringValue];
+
+    switch (operation) {
+        case BHTGifOperationSearch: {
+            NSString* query = stringValue(variables[@"query"]);
+            if (!query) {
+                return nil;
+            }
+            return tenorURL(@"/search", @{
+                @"q": query,
+                @"limit": limit,
+                @"media_filter": TenorMediaFilter,
+            });
+        }
+
+        case BHTGifOperationCategory: {
+            NSString* category = stringValue(variables[@"category"]);
+            if (!category) {
+                return nil;
+            }
+            if ([category caseInsensitiveCompare:@"trending"] == NSOrderedSame) {
+                return tenorURL(@"/trending", @{
+                    @"limit": limit,
+                    @"media_filter": TenorMediaFilter,
+                });
+            }
+            return tenorURL(@"/search", @{
+                @"q": category,
+                @"limit": limit,
+                @"media_filter": TenorMediaFilter,
+            });
+        }
+
+        case BHTGifOperationCategories:
+            return tenorURL(@"/categories", @{@"type": @"featured"});
+
+        case BHTGifOperationNone:
+            break;
+    }
+    return nil;
+}
+
+NSData* payloadForOperation(BHTGifOperation operation, NSData* tenorData,
+                            NSString* format) {
     id json = tenorData ? [NSJSONSerialization JSONObjectWithData:tenorData options:0 error:nil] : nil;
     if (![json isKindOfClass:[NSDictionary class]]) {
         return nil;
@@ -343,197 +316,8 @@ static NSData* payloadForOperation(BHTGifOperation operation, NSData* tenorData,
     return nil;
 }
 
-// MARK: - Protocol
-
-@interface BHTTenorURLProtocol : NSURLProtocol
-@end
-
-@implementation BHTTenorURLProtocol {
-    NSURLSessionDataTask* _task;
-}
-
-+ (BOOL)canInitWithRequest:(NSURLRequest*)request {
-    if (![BHTSettings boolForKey:@"use_tenor_gifs"]) {
-        return NO;
-    }
-    if ([NSURLProtocol propertyForKey:TenorPassThroughKey inRequest:request]) {
-        return NO;
-    }
-    return operationForRequest(request) != BHTGifOperationNone;
-}
-
-+ (NSURLRequest*)canonicalRequestForRequest:(NSURLRequest*)request {
-    return request;
-}
-
-+ (BOOL)requestIsCacheEquivalent:(NSURLRequest*)a toRequest:(NSURLRequest*)b {
-    return [super requestIsCacheEquivalent:a toRequest:b];
-}
-
-// A private session so our Tenor and pass-through traffic never re-enters the
-// protocol stack we're installed into.
-+ (NSURLSession*)fetchSession {
-    static NSURLSession* session = nil;
-    static dispatch_once_t token;
-    dispatch_once(&token, ^{
-        NSURLSessionConfiguration* configuration =
-            [NSURLSessionConfiguration ephemeralSessionConfiguration];
-        configuration.protocolClasses = @[];
-        session = [NSURLSession sessionWithConfiguration:configuration];
-    });
-    return session;
-}
-
-- (void)startLoading {
-    NSDictionary* variables = variablesFromRequest(self.request);
-    BHTGifOperation operation = operationForRequest(self.request);
-    NSURL* url = tenorURLForOperation(operation, variables);
-    if (!url) {
-        [self loadOriginalRequest];
-        return;
-    }
-
-    NSString* format = stringValue(variables[@"image_format"]) ?: @"Gif";
-
-    NSMutableURLRequest* request = [NSMutableURLRequest requestWithURL:url];
-    request.HTTPMethod = @"GET";
-    request.timeoutInterval = TenorRequestTimeout;
-
-    __weak __typeof__(self) weakSelf = self;
-    _task = [[BHTTenorURLProtocol fetchSession]
-        dataTaskWithRequest:request
-          completionHandler:^(NSData* data, NSURLResponse* response, NSError* error) {
-              __strong __typeof__(weakSelf) self = weakSelf;
-              if (!self) {
-                  return;
-              }
-
-              NSHTTPURLResponse* http = [response isKindOfClass:[NSHTTPURLResponse class]]
-                                            ? (NSHTTPURLResponse*)response
-                                            : nil;
-              NSData* payload = (error || http.statusCode != 200)
-                                    ? nil
-                                    : payloadForOperation(operation, data, format);
-
-              // Tenor unreachable, rate-limited or empty: X's own results beat none.
-              if (!payload) {
-                  [self loadOriginalRequest];
-                  return;
-              }
-              [self finishWithPayload:payload];
-          }];
-    [_task resume];
-}
-
-- (void)stopLoading {
-    [_task cancel];
-    _task = nil;
-}
-
-- (void)finishWithPayload:(NSData*)payload {
-    NSHTTPURLResponse* response =
-        [[NSHTTPURLResponse alloc] initWithURL:self.request.URL
-                                    statusCode:200
-                                   HTTPVersion:@"HTTP/1.1"
-                                  headerFields:@{
-                                      @"Content-Type": @"application/json; charset=utf-8",
-                                      @"Content-Length": [@(payload.length) stringValue],
-                                  }];
-
-    [self.client URLProtocol:self
-          didReceiveResponse:response
-          cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-    [self.client URLProtocol:self didLoadData:payload];
-    [self.client URLProtocolDidFinishLoading:self];
-}
-
-// Replay the untouched X request and hand its response back verbatim.
-- (void)loadOriginalRequest {
-    NSMutableURLRequest* passthrough = [self.request mutableCopy];
-    [NSURLProtocol setProperty:@YES forKey:TenorPassThroughKey inRequest:passthrough];
-
-    __weak __typeof__(self) weakSelf = self;
-    _task = [[BHTTenorURLProtocol fetchSession]
-        dataTaskWithRequest:passthrough
-          completionHandler:^(NSData* data, NSURLResponse* response, NSError* error) {
-              __strong __typeof__(weakSelf) self = weakSelf;
-              if (!self) {
-                  return;
-              }
-
-              if (error || !response) {
-                  [self.client URLProtocol:self
-                          didFailWithError:error ?: [NSError errorWithDomain:NSURLErrorDomain
-                                                                        code:NSURLErrorUnknown
-                                                                    userInfo:nil]];
-                  return;
-              }
-
-              [self.client URLProtocol:self
-                    didReceiveResponse:response
-                    cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-              if (data.length) {
-                  [self.client URLProtocol:self didLoadData:data];
-              }
-              [self.client URLProtocolDidFinishLoading:self];
-          }];
-    [_task resume];
-}
-
-@end
-
-// MARK: - Installation
-
-static NSArray<Class>* protocolClassesIncludingTenor(NSArray<Class>* existing) {
-    if ([existing containsObject:[BHTTenorURLProtocol class]]) {
-        return existing;
-    }
-
-    NSMutableArray<Class>* classes = existing ? [existing mutableCopy] : [NSMutableArray array];
-    [classes insertObject:[BHTTenorURLProtocol class] atIndex:0];
-    return classes;
-}
-
-static void installTenorProtocol(NSURLSessionConfiguration* configuration) {
+void installTenorProtocol(NSURLSessionConfiguration* configuration) {
     if (configuration) {
         configuration.protocolClasses = protocolClassesIncludingTenor(configuration.protocolClasses);
     }
-}
-
-%hook NSURLSessionConfiguration
-
-+ (NSURLSessionConfiguration*)defaultSessionConfiguration {
-    NSURLSessionConfiguration* configuration = %orig;
-    installTenorProtocol(configuration);
-    return configuration;
-}
-
-+ (NSURLSessionConfiguration*)ephemeralSessionConfiguration {
-    NSURLSessionConfiguration* configuration = %orig;
-    installTenorProtocol(configuration);
-    return configuration;
-}
-
-%end
-
-%hook NSURLSession
-
-+ (NSURLSession*)sessionWithConfiguration:(NSURLSessionConfiguration*)configuration {
-    installTenorProtocol(configuration);
-    return %orig;
-}
-
-+ (NSURLSession*)sessionWithConfiguration:(NSURLSessionConfiguration*)configuration
-                                 delegate:(id)delegate
-                            delegateQueue:(NSOperationQueue*)queue {
-    installTenorProtocol(configuration);
-    return %orig;
-}
-
-%end
-
-%ctor {
-    [NSURLProtocol registerClass:[BHTTenorURLProtocol class]];
-
-    %init;
 }

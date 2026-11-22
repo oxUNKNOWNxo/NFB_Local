@@ -1,13 +1,5 @@
-//
-//  Theme.x
-//  NeoFreeBird
-//
-
-#import <math.h>
-#import <objc/runtime.h>
-#import "Headers/TFNHeaders.h"
-#import "Headers/UIHeaders.h"
-#import "HookHelpers.h"
+#import "Theme.h"
+#import "../HookHelpers.h"
 
 @interface UIColor (BHTDynamicColorIdentifier)
 - (id)tfn_dynamicColorIdentifier;
@@ -15,7 +7,7 @@
 
 // MARK: - Custom accent color
 
-static NSNumber* selectedThemeColor(void) {
+NSNumber* BHTSelectedThemeColor(void) {
     return [NSUserDefaults.standardUserDefaults objectForKey:@"bh_color_theme_selectedColor"];
 }
 
@@ -30,7 +22,7 @@ static UIColor* selectedCustomThemeColor(void) {
                            alpha:[components[3] doubleValue]];
 }
 
-static NSInteger nativeThemeOption(NSInteger option) {
+NSInteger BHTNativeThemeOption(NSInteger option) {
     // -1 is our custom swatch, not a valid Twitter palette option.
     return option == -1 ? 0 : option;
 }
@@ -54,53 +46,22 @@ static UIColor* BHTReplaceNativeAccent(UIColor* color, UIColor* nativeAccent) {
         fabs(r - nr) > 0.004 || fabs(g - ng) > 0.004 ||
         fabs(b - nb) > 0.004) return color;
 
-    return [custom colorWithAlphaComponent:MIN(1.0, custom.CGColor ?
-        CGColorGetAlpha(custom.CGColor) * a : a)];
+    return [custom colorWithAlphaComponent:MIN(1.0, custom.CGColor ? CGColorGetAlpha(custom.CGColor) * a : a)];
 }
 
 // Every apply path (launch re-apply, trait changes, both settings pickers)
 // funnels through this setter, so coercing here keeps the custom color pinned.
-%hook TAEColorSettings
-
-- (void)setPrimaryColorOption:(NSInteger)colorOption {
-    NSNumber* selectedColor = selectedThemeColor();
-    %orig(nativeThemeOption(selectedColor ? selectedColor.integerValue : colorOption));
-}
-
-- (NSInteger)primaryColorOption {
-    NSNumber* selectedColor = selectedThemeColor();
-    return selectedColor ? nativeThemeOption(selectedColor.integerValue) : %orig;
-}
-
-%end
 
 void applySelectedThemeColor(void) {
-    NSNumber* selectedColor = selectedThemeColor();
+    NSNumber* selectedColor = BHTSelectedThemeColor();
     if (selectedColor) {
         [[objc_getClass("TAEColorSettings") sharedSettings]
-            setPrimaryColorOption:nativeThemeOption(selectedColor.integerValue)];
+            setPrimaryColorOption:BHTNativeThemeOption(selectedColor.integerValue)];
     }
 }
 
 // The native palette supplies most accent-colored controls via primaryColor.
 // Keep the six preset getters intact so their picker swatches stay accurate.
-%hook TAELightColorPalette
-- (UIColor*)primaryColor {
-    UIColor* native = %orig;
-    objc_setAssociatedObject(self, &BHTNativePrimaryColorKey, native,
-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    return selectedCustomThemeColor() ?: native;
-}
-%end
-
-%hook TAEDarkColorPalette
-- (UIColor*)primaryColor {
-    UIColor* native = %orig;
-    objc_setAssociatedObject(self, &BHTNativePrimaryColorKey, native,
-                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    return selectedCustomThemeColor() ?: native;
-}
-%end
 
 static UIColor* BHTNativeAccentForCurrentPalette(void) {
     TAEColorSettings* settings = [objc_getClass("TAEColorSettings") sharedSettings];
@@ -124,11 +85,11 @@ static UIColor* BHTNativeAccentForLastPreset(void) {
     NSDictionary* cached = objc_getAssociatedObject(info, &BHTLastNativeAccentKey);
     if ([cached[@"option"] integerValue] == option) return cached[@"color"];
     id<TAEColorPalette> palette = ((id (*)(id, SEL))objc_msgSend)(info,
-                                                                 @selector(colorPalette));
+                                                                  @selector(colorPalette));
     UIColor* color = [palette primaryColorForOption:option];
     if (color) {
-        objc_setAssociatedObject(info, &BHTLastNativeAccentKey,
-                                 @{@"option": @(option), @"color": color},
+        objc_setAssociatedObject(info, &BHTLastNativeAccentKey, @{@"option": @(option),
+                                                                  @"color": color},
                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     return color;
@@ -137,73 +98,123 @@ static UIColor* BHTNativeAccentForLastPreset(void) {
 static UIColor* BHTReplaceKnownAccent(UIColor* color, UIColor* currentNative) {
     UIColor* mapped = BHTReplaceNativeAccent(color, currentNative);
     return mapped == color
-        ? BHTReplaceNativeAccent(color, BHTNativeAccentForLastPreset())
-        : mapped;
+               ? BHTReplaceNativeAccent(color, BHTNativeAccentForLastPreset())
+               : mapped;
 }
 
 // Named palette colors are resolved by this loader, often from a cached
 // preset. Replace colors that match the palette's native accent. The six
 // preset swatches stay native because their option properties are excluded.
-%hook TAEColorLoader
-
-- (UIColor*)colorForPropertyName:(NSString*)name {
-    UIColor* color = %orig;
-    if (BHTMappingLoadedColor || !selectedCustomThemeColor() ||
-        ![name isKindOfClass:NSString.class] ||
-        [name isEqualToString:@"primaryColor"] ||
-        [name hasPrefix:@"primaryColorOption"]) return color;
-
-    BHTMappingLoadedColor = YES;
-    Ivar paletteField = class_getInstanceVariable(object_getClass(self), "_palette");
-    id palette = paletteField ? object_getIvar(self, paletteField) : nil;
-    UIColor* native = objc_getAssociatedObject(palette, &BHTNativePrimaryColorKey);
-    if (!native && palette &&
-        [palette respondsToSelector:@selector(primaryColor)]) {
-        // The palette getter records the original color before substituting.
-        ((id (*)(id, SEL))objc_msgSend)(palette, @selector(primaryColor));
-        native = objc_getAssociatedObject(palette, &BHTNativePrimaryColorKey);
-    }
-    UIColor* mapped = BHTReplaceKnownAccent(color, native);
-    BHTMappingLoadedColor = NO;
-    return mapped;
-}
-
-%end
 
 // Attributed strings and view setters resolve saved dynamic color identifiers
 // through this manager, bypassing the named palette loader above.
-%hook TFNDynamicColorManager
-
-- (UIColor*)dynamicColorForObject:(id)object color:(UIColor*)color {
-    UIColor* resolved = %orig;
-    if (BHTMappingDynamicColor || !selectedCustomThemeColor()) return resolved;
-    id identifier = [color respondsToSelector:@selector(tfn_dynamicColorIdentifier)]
-        ? [color tfn_dynamicColorIdentifier] : nil;
-    // The picker reads these six tokens directly; they are previews, not the
-    // active accent, even when the selected option is custom.
-    if ([identifier isKindOfClass:NSString.class] &&
-        [identifier hasPrefix:@"primaryColorOption"]) return resolved;
-    BHTMappingDynamicColor = YES;
-    BOOL accentText = [identifier isKindOfClass:NSString.class] &&
-        ([identifier isEqualToString:@"primaryColor"] ||
-         [identifier isEqualToString:@"textLinkColor"]);
-    UIColor* mapped = accentText
-        ? BHTReplaceNativeAccent(resolved, resolved)
-        : BHTReplaceKnownAccent(resolved, BHTNativeAccentForCurrentPalette());
-    BHTMappingDynamicColor = NO;
-    return mapped;
-}
-
-%end
 
 // MARK: - Dim background recolor
 
-static BOOL BHTIsInsideScrollEdgeTreatment(UIView* view) {
-    Class treatmentClass = NSClassFromString(@"_TtC13XDesignSystem19ScrollEdgeTreatment");
-    for (UIView* parent = view.superview; parent; parent = parent.superview) {
-        if ([parent isKindOfClass:treatmentClass]) return YES;
+@interface BHTDimGlassPlacement : NSObject
+@property (nonatomic, weak) UIView* originalParent;
+@property (nonatomic) NSUInteger originalIndex;
+@property (nonatomic) UIViewAutoresizing originalAutoresizingMask;
+@property (nonatomic, strong) UIView* toastTint;
+@end
+@implementation BHTDimGlassPlacement
+@end
+
+static char BHTDimGlassPlacementKey;
+
+static UIView* ThemeAncestorOfClass(UIView* view, Class ancestorClass) {
+    for (UIView* ancestor = view.superview; ancestor; ancestor = ancestor.superview) {
+        if ([ancestor isKindOfClass:ancestorClass]) return ancestor;
+    }
+    return nil;
+}
+
+static BOOL BHTDimGlassIsInContainer(UIView* glass, NSString* className) {
+    return ThemeAncestorOfClass(glass, NSClassFromString(className)) != nil;
+}
+
+static BOOL BHTDimGlassContainsForeground(UIView* host) {
+    Class buttonClass = NSClassFromString(@"TFNButton");
+    NSMutableArray<UIView*>* pending = [host.subviews mutableCopy];
+    while (pending.count) {
+        UIView* view = pending.lastObject;
+        [pending removeLastObject];
+        if ([view isKindOfClass:UILabel.class] || [view isKindOfClass:UIImageView.class] ||
+            [view isKindOfClass:buttonClass]) return YES;
+        [pending addObjectsFromArray:view.subviews];
     }
     return NO;
+}
+
+void BHTUpdateDimGlass(UIView* glass) {
+    SEL selector = @selector(contentView);
+    if (![glass respondsToSelector:selector]) return;
+    UIView* host = ((id (*)(id, SEL))objc_msgSend)(glass, selector);
+    if (![host isKindOfClass:UIView.class]) return;
+
+    BHTDimGlassPlacement* placement = objc_getAssociatedObject(glass, &BHTDimGlassPlacementKey);
+    BOOL toast = BHTDimGlassIsInContainer(glass, @"XDSToastContainerView");
+    BOOL enabled = NFBLiquidGlassEnabled() && BHTDimThemeEnabled() &&
+                   glass.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark &&
+                   (toast || BHTDimGlassIsInContainer(glass, @"XDSButton") ||
+                    BHTDimGlassContainsForeground(host));
+    if (!enabled) {
+        [placement.toastTint removeFromSuperview];
+        UIView* parent = placement.originalParent;
+        if (parent && host.superview == glass) {
+            CGRect frame = [glass convertRect:host.frame toView:parent];
+            [parent insertSubview:host atIndex:MIN(placement.originalIndex, parent.subviews.count)];
+            host.frame = frame;
+            host.autoresizingMask = placement.originalAutoresizingMask;
+        }
+        objc_setAssociatedObject(glass, &BHTDimGlassPlacementKey, nil,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        return;
+    }
+
+    if (!placement) {
+        UIView* parent = host.superview;
+        UIVisualEffectView* effect = [parent.superview isKindOfClass:UIVisualEffectView.class]
+                                         ? (UIVisualEffectView*)parent.superview
+                                         : nil;
+        if (!effect || parent != effect.contentView ||
+            ![effect.effect isKindOfClass:NSClassFromString(@"UIGlassEffect")] ||
+            !host.translatesAutoresizingMaskIntoConstraints) return;
+        for (NSLayoutConstraint* constraint in parent.constraints) {
+            if (constraint.active && (constraint.firstItem == host || constraint.secondItem == host)) return;
+        }
+        placement = [BHTDimGlassPlacement new];
+        placement.originalParent = parent;
+        placement.originalIndex = [parent.subviews indexOfObjectIdenticalTo:host];
+        placement.originalAutoresizingMask = host.autoresizingMask;
+        CGRect frame = [parent convertRect:host.frame toView:glass];
+        objc_setAssociatedObject(glass, &BHTDimGlassPlacementKey, placement,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+        [glass addSubview:host];
+        host.frame = frame;
+        host.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    }
+
+    if (!toast && placement.toastTint.superview) {
+        [placement.toastTint removeFromSuperview];
+    } else if (toast && host.superview == glass) {
+        if (!placement.toastTint) {
+            UIView* tint = [[UIView alloc] initWithFrame:host.bounds];
+            tint.userInteractionEnabled = NO;
+            tint.isAccessibilityElement = NO;
+            tint.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+            tint.backgroundColor = [BHTDimElevatedBackgroundColor() colorWithAlphaComponent:0.75];
+            placement.toastTint = tint;
+        }
+        if (placement.toastTint.superview != host) [host insertSubview:placement.toastTint atIndex:0];
+        if (host.subviews.firstObject != placement.toastTint) [host sendSubviewToBack:placement.toastTint];
+        placement.toastTint.frame = host.bounds;
+    }
+    if (host.superview == glass && glass.subviews.lastObject != host) [glass bringSubviewToFront:host];
+}
+
+BOOL BHTIsInsideScrollEdgeTreatment(UIView* view) {
+    return ThemeAncestorOfClass(view, NSClassFromString(@"_TtC13XDesignSystem19ScrollEdgeTreatment")) != nil;
 }
 
 static UIColor* BHTDimScrollEdgeColor(UIColor* color, UITraitCollection* traits) {
@@ -231,7 +242,7 @@ static BOOL BHTIsScrollEdgeBlurTintView(UIView* view) {
     return NO;
 }
 
-static void BHTApplyScrollEdgeBlur(XDSBlur* blur) {
+void BHTApplyScrollEdgeBlur(XDSBlur* blur) {
     if (!BHTIsInsideScrollEdgeTreatment(blur)) return;
     Ivar tintField = class_getInstanceVariable(object_getClass(blur), "tintView");
     UIView* tintView = tintField ? object_getIvar(blur, tintField) : nil;
@@ -240,7 +251,18 @@ static void BHTApplyScrollEdgeBlur(XDSBlur* blur) {
     if (dim) tintView.backgroundColor = dim;
 }
 
-static void BHTApplyScrollEdgeFade(UIView* fade) {
+NSArray* BHTDimScrollEdgeColors(NSArray* colors, UITraitCollection* traits) {
+    NSMutableArray* mapped = [NSMutableArray arrayWithCapacity:colors.count];
+    BOOL changed = NO;
+    for (id entry in colors) {
+        UIColor* dim = BHTDimScrollEdgeColor([UIColor colorWithCGColor:(__bridge CGColorRef)entry], traits);
+        [mapped addObject:dim ? (__bridge id)dim.CGColor : entry];
+        changed |= dim != nil;
+    }
+    return changed ? mapped : colors;
+}
+
+void BHTApplyScrollEdgeFade(UIView* fade) {
     if (!BHTIsInsideScrollEdgeTreatment(fade) || !BHTDimThemeEnabled() ||
         fade.traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) return;
 
@@ -250,60 +272,11 @@ static void BHTApplyScrollEdgeFade(UIView* fade) {
 
     NSArray* colors = gradient.colors;
     if (!colors.count) return;
-    NSMutableArray* mapped = [NSMutableArray arrayWithCapacity:colors.count];
-    BOOL changed = NO;
-    for (id entry in colors) {
-        CGColorRef cgColor = (__bridge CGColorRef)entry;
-        UIColor* dim = BHTDimScrollEdgeColor([UIColor colorWithCGColor:cgColor],
-                                             fade.traitCollection);
-        [mapped addObject:dim ? (__bridge id)dim.CGColor : entry];
-        changed |= dim != nil;
-    }
-    if (changed) gradient.colors = mapped;
+    NSArray* mapped = BHTDimScrollEdgeColors(colors, fade.traitCollection);
+    if (mapped != colors) gradient.colors = mapped;
 }
 
-%hook CAGradientLayer
-
-- (void)setColors:(NSArray*)colors {
-    UIView* owner = (UIView*)self.superlayer.delegate;
-    Class fadeClass = NSClassFromString(@"_TtC13XDesignSystem18ScrollEdgeFadeView");
-    if (![owner isKindOfClass:fadeClass] || !BHTIsInsideScrollEdgeTreatment(owner) ||
-        !BHTDimThemeEnabled() ||
-        owner.traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
-        %orig;
-        return;
-    }
-
-    NSMutableArray* mapped = [NSMutableArray arrayWithCapacity:colors.count];
-    for (id entry in colors) {
-        UIColor* dim = BHTDimScrollEdgeColor(
-            [UIColor colorWithCGColor:(__bridge CGColorRef)entry], owner.traitCollection);
-        [mapped addObject:dim ? (__bridge id)dim.CGColor : entry];
-    }
-    %orig(mapped);
-}
-
-%end
-
-%hook XDSBlur
-
-- (void)layoutSubviews {
-    %orig;
-    BHTApplyScrollEdgeBlur(self);
-}
-
-%end
-
-%hook _TtC13XDesignSystem18ScrollEdgeFadeView
-
-- (void)layoutSubviews {
-    %orig;
-    BHTApplyScrollEdgeFade(self);
-}
-
-%end
-
-static void BHTApplyDimScrollEdgeChildren(UIView* treatment) {
+void BHTApplyDimScrollEdgeChildren(UIView* treatment) {
     Class blurClass = NSClassFromString(@"XDSBlur");
     Class fadeClass = NSClassFromString(@"_TtC13XDesignSystem18ScrollEdgeFadeView");
     NSMutableArray<UIView*>* pending = [treatment.subviews mutableCopy];
@@ -319,175 +292,7 @@ static void BHTApplyDimScrollEdgeChildren(UIView* treatment) {
     }
 }
 
-%hook _TtC13XDesignSystem19ScrollEdgeTreatment
-
-- (void)layoutSubviews {
-    %orig;
-    if (!BHTDimThemeEnabled()) return;
-    BHTApplyDimScrollEdgeChildren(self);
-}
-
-%end
-
-// The app only ever renders Light or Dark now -- there's no native third
-// option -- so Dim comes back by intercepting Dark's palette at its one
-// choke point and swapping in a proxy that recolors just the background
-// family, leaving Light untouched.
-%hook TAETwitterColorPaletteSettingInfo
-
-- (id<TAEColorPalette>)colorPalette {
-    id<TAEColorPalette> realPalette = %orig;
-    if (selectedCustomThemeColor()) {
-        UIColor* native = objc_getAssociatedObject(realPalette, &BHTNativePrimaryColorKey);
-        if (!native && [(id)realPalette respondsToSelector:@selector(primaryColor)]) {
-            ((id (*)(id, SEL))objc_msgSend)(realPalette, @selector(primaryColor));
-            native = objc_getAssociatedObject(realPalette, &BHTNativePrimaryColorKey);
-        }
-        objc_setAssociatedObject(self, &BHTNativePrimaryColorKey, native,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    if (self.isDark && BHTDimThemeEnabled()) {
-        return (id<TAEColorPalette>)[BHTDimPaletteProxy proxyWithPalette:realPalette];
-    }
-    return realPalette;
-}
-
-%end
-
-// Headers, small containers, profile pages, and the boxes around some cells
-// don't go through TAEColorPalette at all -- they're drawn with UIKit's own
-// dynamic system background colors, which Apple defines as pure black (or
-// near enough) in Dark. Re-point those at the same three Dim shades so
-// nothing native-styled is left behind.
-%hook UIColor
-
-+ (UIColor*)systemBackgroundColor {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled()) {
-        return original;
-    }
-    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? BHTDimBackgroundColor()
-                                                                     : original;
-    }];
-}
-
-+ (UIColor*)secondarySystemBackgroundColor {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled()) {
-        return original;
-    }
-    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? BHTDimElevatedBackgroundColor()
-                                                                     : original;
-    }];
-}
-
-+ (UIColor*)tertiarySystemBackgroundColor {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled()) {
-        return original;
-    }
-    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? BHTDimHighlightBackgroundColor()
-                                                                     : original;
-    }];
-}
-
-+ (UIColor*)systemGroupedBackgroundColor {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled()) {
-        return original;
-    }
-    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? BHTDimBackgroundColor()
-                                                                     : original;
-    }];
-}
-
-+ (UIColor*)secondarySystemGroupedBackgroundColor {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled()) {
-        return original;
-    }
-    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? BHTDimElevatedBackgroundColor()
-                                                                     : original;
-    }];
-}
-
-+ (UIColor*)tertiarySystemGroupedBackgroundColor {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled()) {
-        return original;
-    }
-    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
-        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? BHTDimHighlightBackgroundColor()
-                                                                     : original;
-    }];
-}
-
-%end
-
-%hook UIDynamicSystemColor
-
-- (UIColor*)resolvedColorWithTraitCollection:(UITraitCollection*)traitCollection {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled() || traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
-        return original;
-    }
-    UIColor* replacement = BHTDimReplacementForResolvedColor(original);
-    return replacement ?: original;
-}
-
-%end
-
-%hook UIDeviceRGBColor
-- (UIColor*)resolvedColorWithTraitCollection:(UITraitCollection*)traitCollection {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled() || traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
-        return original;
-    }
-    UIColor* replacement = BHTDimReplacementForResolvedColor(original);
-    return replacement ?: original;
-}
-
-%end
-
-%hook UIDynamicCatalogColor
-
-- (UIColor*)resolvedColorWithTraitCollection:(UITraitCollection*)traitCollection {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled() || traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
-        return original;
-    }
-    UIColor* replacement = BHTDimReplacementForResolvedColor(original);
-    return replacement ?: original;
-}
-
-%end
-
-%hook UIExtendedSRGBColorSpace
-
-- (UIColor*)resolvedColorWithTraitCollection:(UITraitCollection*)traitCollection {
-    UIColor* original = %orig;
-    if (!BHTDimThemeEnabled() || traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
-        return original;
-    }
-    UIColor* replacement = BHTDimReplacementForResolvedColor(original);
-    return replacement ?: original;
-}
-
-%end
-
-// X 12.9 sometimes assigns backgroundPrimary (or a literal black color) to a
-// view after the palette has already been resolved. Reused timeline rows and
-// conversation/detail surfaces take this path while scrolling, so the palette
-// proxy and private UIColor resolution hooks above never get another chance to
-// recolor them. Normalize only UIView background assignments, and repeat the
-// normalization when a view enters a window so colors assigned before traits
-// were available are covered as well.
-static UIColor* BHTDimNormalizedViewBackground(UIView* view, UIColor* color) {
+UIColor* BHTDimNormalizedViewBackground(UIView* view, UIColor* color) {
     if (!view || !color || !BHTDimThemeEnabled() ||
         view.traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
         return color;
@@ -504,9 +309,6 @@ static UIColor* BHTDimNormalizedViewBackground(UIView* view, UIColor* color) {
         return replacement;
     }
 
-    // The UIColor hooks may already have resolved a catalog background to a
-    // Dim shade. Pin that resolved value on the view so later reuse cannot
-    // fall back to the catalog's original pure-black dark variant.
     CGFloat red = 0, green = 0, blue = 0, alpha = 0;
     if ([resolved getRed:&red green:&green blue:&blue alpha:&alpha] && alpha >= 0.99) {
         BOOL isDimShade =
@@ -524,35 +326,6 @@ static UIColor* BHTDimNormalizedViewBackground(UIView* view, UIColor* color) {
     return color;
 }
 
-%hook UIView
-
-- (void)setBackgroundColor:(UIColor*)color {
-    %orig(BHTDimNormalizedViewBackground(self, color));
-}
-
-- (void)didMoveToWindow {
-    %orig;
-    if (self.window && self.backgroundColor) {
-        UIColor* normalized = BHTDimNormalizedViewBackground(self, self.backgroundColor);
-        if (normalized != self.backgroundColor) {
-            self.backgroundColor = normalized;
-        }
-    }
-}
-
-%end
-
-%hook TFNSolidColorView
-
-- (void)didMoveToWindow {
-    %orig;
-    if (BHTDimThemeEnabled()) {
-        self.hidden = TRUE;
-    }
-}
-
-%end
-
 void BHTApplyDimToVideoControls(UIView* controlsView) {
     if (!BHTDimThemeEnabled() || !controlsView ||
         controlsView.traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
@@ -562,11 +335,7 @@ void BHTApplyDimToVideoControls(UIView* controlsView) {
     controlsView.superview.backgroundColor = BHTDimElevatedBackgroundColor();
 }
 
-// X 12.9's Explore search pill is a background image owned by UISearchBar's
-// private _UITextFieldImageBackgroundView. It never asks TAEColorPalette for
-// pillDefaultBackgroundColor, so recolor it through UISearchBar's public image
-// API and preserve the native pill geometry with stretchable round caps.
-static UIImage* BHTDimSearchPillImage(void) {
+UIImage* BHTDimSearchPillImage(void) {
     static UIImage* image;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -587,7 +356,7 @@ static UIImage* BHTDimSearchPillImage(void) {
     return image;
 }
 
-static void BHTApplyDimSearchPill(UISearchBar* searchBar) {
+void BHTApplyDimSearchPill(UISearchBar* searchBar) {
     if (!BHTDimThemeEnabled() ||
         searchBar.traitCollection.userInterfaceStyle != UIUserInterfaceStyleDark) {
         return;
@@ -596,191 +365,27 @@ static void BHTApplyDimSearchPill(UISearchBar* searchBar) {
                                     forState:UIControlStateNormal];
 }
 
-%hook TFNSearchBar
-
-- (void)layoutSubviews {
-    %orig;
-    BHTApplyDimSearchPill((UISearchBar*)self);
+BOOL BHTIsExploreSearchBackgroundView(UIView* view) {
+    return ThemeAncestorOfClass(view, objc_getClass("TFNSearchBar")) != nil;
 }
-
-- (void)didMoveToWindow {
-    %orig;
-    BHTApplyDimSearchPill((UISearchBar*)self);
-}
-
-%end
-
-static BOOL BHTIsExploreSearchBackgroundView(UIView* view) {
-    Class searchBarClass = objc_getClass("TFNSearchBar");
-    for (UIView* ancestor = view.superview; ancestor; ancestor = ancestor.superview) {
-        if (searchBarClass && [ancestor isKindOfClass:searchBarClass]) {
-            return YES;
-        }
-    }
-    return NO;
-}
-
-// TFNSearchBar reapplies its stock image after -layoutSubviews, so the public
-// setter above alone does not survive X's final configuration pass. Intercept
-// the concrete UIKit image owner, but only when it belongs to TFNSearchBar.
-%hook _UITextFieldImageBackgroundView
-
-- (void)setImage:(UIImage*)image {
-    if (BHTDimThemeEnabled() && BHTIsExploreSearchBackgroundView((UIView*)self) &&
-        ((UIView*)self).traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        %orig(BHTDimSearchPillImage());
-    } else {
-        %orig(image);
-    }
-}
-
-- (void)didMoveToWindow {
-    %orig;
-    if (((UIView*)self).window && BHTDimThemeEnabled() &&
-        BHTIsExploreSearchBackgroundView((UIView*)self) &&
-        ((UIView*)self).traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark) {
-        ((UIImageView*)self).image = BHTDimSearchPillImage();
-    }
-}
-
-%end
-
-%hook _TtC10TFNUISwift26LegacySegmentedTabBarStyle
-
-- (void)setHighlightBarColor:(UIColor*)color {
-    if (color && [BHTSettings boolForKey:@"tab_bar_theming"]) {
-        %orig(CurrentAccentColor());
-        return;
-    }
-    %orig(color);
-}
-
-%end
-
-%hook _TtC10TFNUISwift25LegacySegmentedTabBarView
-
-- (void)setStyle:(_TtC10TFNUISwift26LegacySegmentedTabBarStyle*)style {
-    if (style && [BHTSettings boolForKey:@"tab_bar_theming"]) {
-        style.highlightBarColor = CurrentAccentColor();
-    }
-    %orig(style);
-}
-
-%end
-
-%hook _TtC10TFNUISwift31LegacySegmentedHighlightBarView
-
-- (void)setBackgroundColor:(UIColor*)color {
-    if (color && [BHTSettings boolForKey:@"tab_bar_theming"]) {
-        %orig(CurrentAccentColor());
-        return;
-    }
-    %orig(color);
-}
-
-%end
-
-%hook _UIBarBackground
-
-- (void)didMoveToWindow {
-    %orig;
-    if (self.window && BHTDimThemeEnabled() && !NFBLiquidGlassEnabled()) {
-        self.backgroundColor = BHTDimBackgroundColor();
-    }
-}
-
-%end
-
-// MARK: - Custom tab bar order and visibility
-
-static NSString* scribePageForEntry(id<T1AppNavigationTabEntry> entry) {
-    if (![entry respondsToSelector:@selector(tabView)]) {
-        return nil;
-    }
-    return [entry tabView].scribePage;
-}
-
-// Operates on the tab ENTRIES, not the button views: the app derives both the
-// buttons and their content view controllers from this one array.
-static NSArray* orderedTabEntries(NSArray* entries) {
-    // Record the underlying tab views so the editor can show real titles and icons.
-    NSMutableArray* tabViews = [NSMutableArray new];
-    for (id<T1AppNavigationTabEntry> entry in entries) {
-        T1TabView* tabView = [entry respondsToSelector:@selector(tabView)] ? [entry tabView] : nil;
-        if (tabView) {
-            [tabViews addObject:tabView];
-        }
-    }
-    [CustomTabBarUtility recordTabViews:tabViews];
-
-    NSArray<NSString*>* visibleOrder = [CustomTabBarUtility visiblePageIDsInOrder];
-
-    NSMutableDictionary<NSString*, id>* entriesByPage = [NSMutableDictionary new];
-    for (id<T1AppNavigationTabEntry> entry in entries) {
-        NSString* page = scribePageForEntry(entry);
-        if (page && !entriesByPage[page]) {
-            entriesByPage[page] = entry;
-        }
-    }
-
-    // Not customised yet: show the default set (Home, Search, Notifications, Chats)
-    // in that order, hiding everything else the app builds.
-    if (!visibleOrder) {
-        NSMutableArray* defaultEntries = [NSMutableArray new];
-        for (NSString* pageID in [CustomTabBarUtility defaultVisiblePageIDs]) {
-            id entry = entriesByPage[pageID];
-            if (entry) {
-                [defaultEntries addObject:entry];
-            }
-        }
-        return defaultEntries;
-    }
-
-    // Only the chosen tabs show; anything the editor hasn't been told to show
-    // (including tabs unlocked after the user last saved) stays hidden.
-    NSMutableArray* orderedEntries = [NSMutableArray new];
-    NSMutableSet* placed = [NSMutableSet new];
-    for (NSString* pageID in visibleOrder) {
-        id entry = entriesByPage[pageID];
-        if (entry && ![placed containsObject:pageID]) {
-            [orderedEntries addObject:entry];
-            [placed addObject:pageID];
-        }
-    }
-
-    return orderedEntries;
-}
-// The single ordered spine that feeds both the tab buttons and their content, so
-// filtering/reordering here keeps taps mapped to the right panel.
-%hook T1TabbedAppNavigationViewController
-
-- (void)setVisibleTabEntries:(NSArray*)entries {
-    %orig([CustomTabBarUtility usesNativeEditor] ? entries : orderedTabEntries(entries));
-}
-
-%end
-
-// MARK: - Keep tab bar visible
-
-%hook T1TabBarViewController
-
-// The scroll-driven hide only reaches the tab bar as a collapse ratio, so
-// clamping it spares the deliberate hides (fullscreen media, immersive player).
-- (void)setTabBarCollapseRatio:(double)ratio {
-    if ([BHTSettings boolForKey:@"no_tab_bar_hiding"]) {
-        %orig(0.0);
-    } else {
-        %orig(ratio);
-    }
-}
-
-%end
 
 // MARK: - Tab bar icon and label theming
 
 static char BHTGlassTabOriginalTintKey;
 static char BHTGlassTabLabelKey;
 static char BHTGlassTabOverlayKey;
+
+static UILabel* BHTCreateTabLabel(void) {
+    UILabel* label = [[UILabel alloc] initWithFrame:CGRectZero];
+    label.font = [UIFont systemFontOfSize:9.0 weight:UIFontWeightMedium];
+    label.textAlignment = NSTextAlignmentCenter;
+    label.adjustsFontSizeToFitWidth = YES;
+    label.minimumScaleFactor = 0.7;
+    label.lineBreakMode = NSLineBreakByTruncatingTail;
+    label.isAccessibilityElement = NO;
+    label.userInteractionEnabled = NO;
+    return label;
+}
 
 static void BHTCollectGlassTabItems(UIView* view, Class itemClass,
                                     NSMutableArray<UIView*>* items) {
@@ -802,7 +407,7 @@ static NSString* BHTGlassTabItemTitle(UIView* item, UIView* bar) {
     return nil;
 }
 
-static void BHTLayoutGlassTabItem(UIView* item) {
+void BHTLayoutGlassTabItem(UIView* item) {
     UILabel* label = objc_getAssociatedObject(item, &BHTGlassTabLabelKey);
     if (!label) return;
 
@@ -828,7 +433,7 @@ static void BHTLayoutGlassTabItem(UIView* item) {
                                height / 2.0 - (showLabel && height >= 34.0 ? 5.0 : 0.0));
 }
 
-static void BHTApplyGlassTabLabels(UIView* bar) {
+void BHTApplyGlassTabLabels(UIView* bar) {
     Class itemClass = NSClassFromString(@"_TtC11XNavigation14TabBarItemView");
     if (!itemClass) return;
 
@@ -868,20 +473,13 @@ static void BHTApplyGlassTabLabels(UIView* bar) {
         if (bar.subviews.lastObject != overlay) [bar bringSubviewToFront:overlay];
     }
 
-    NSMutableSet<UILabel*>* activeLabels = [NSMutableSet new];
+    NSMutableSet<UIView*>* activeLabels = [NSMutableSet new];
     for (NSUInteger index = 0; index < items.count; index++) {
         UIView* item = items[index];
         UILabel* label = objc_getAssociatedObject(item, &BHTGlassTabLabelKey);
         NSString* title = enabled ? BHTGlassTabItemTitle(item, bar) : nil;
         if (!label && title.length) {
-            label = [[UILabel alloc] initWithFrame:CGRectZero];
-            label.font = [UIFont systemFontOfSize:9.0 weight:UIFontWeightMedium];
-            label.textAlignment = NSTextAlignmentCenter;
-            label.adjustsFontSizeToFitWidth = YES;
-            label.minimumScaleFactor = 0.7;
-            label.lineBreakMode = NSLineBreakByTruncatingTail;
-            label.isAccessibilityElement = NO;
-            label.userInteractionEnabled = NO;
+            label = BHTCreateTabLabel();
             objc_setAssociatedObject(item, &BHTGlassTabLabelKey, label,
                                      OBJC_ASSOCIATION_RETAIN_NONATOMIC);
         }
@@ -902,7 +500,7 @@ static void BHTApplyGlassTabLabels(UIView* bar) {
     if (!enabled) [overlay removeFromSuperview];
 }
 
-static void BHTApplyGlassTabAccent(UIView* item) {
+void BHTApplyGlassTabAccent(UIView* item) {
     if (item.isAccessibilityElement) return;
 
     Ivar field = class_getInstanceVariable(object_getClass(item), "imageView");
@@ -927,40 +525,10 @@ static void BHTApplyGlassTabAccent(UIView* item) {
     if (![imageView.tintColor isEqual:tint]) imageView.tintColor = tint;
 }
 
-%hook _TtC11XNavigation10TabBarView
-
-- (void)layoutSubviews {
-    %orig;
-    BHTApplyGlassTabLabels((UIView*)self);
-}
-
-%new
-- (void)nfb_refreshGlassTabLabels {
-    BHTApplyGlassTabLabels((UIView*)self);
-}
-
-%end
-
-%hook _TtC11XNavigation14TabBarItemView
-
-- (void)layoutSubviews {
-    %orig;
-    BHTApplyGlassTabAccent((UIView*)self);
-    BHTLayoutGlassTabItem((UIView*)self);
-}
-
-%new
-- (void)nfb_applyGlassTabAccent {
-    BHTApplyGlassTabAccent((UIView*)self);
-}
-
-%end
-
-static BOOL updatingTabIconColor = NO;
 static char BHTLegacyTabLabelKey;
 static char BHTLegacyTabGlyphShiftKey;
 
-static UIColor* tabItemColor(BOOL selected) {
+UIColor* BHTTabItemColor(BOOL selected) {
     return selected ? CurrentAccentColor() : [UIColor secondaryLabelColor];
 }
 
@@ -975,110 +543,25 @@ static void BHTLayoutLegacyTabLabel(T1TabView* tabView) {
     }
 
     if (!label) {
-        label = [[UILabel alloc] initWithFrame:CGRectZero];
-        label.font = [UIFont systemFontOfSize:9.0 weight:UIFontWeightMedium];
-        label.textAlignment = NSTextAlignmentCenter;
-        label.adjustsFontSizeToFitWidth = YES;
-        label.minimumScaleFactor = 0.7;
-        label.lineBreakMode = NSLineBreakByTruncatingTail;
-        label.isAccessibilityElement = NO;
-        label.userInteractionEnabled = NO;
+        label = BHTCreateTabLabel();
         objc_setAssociatedObject(tabView, &BHTLegacyTabLabelKey, label,
                                  OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     }
     label.text = tabView.title;
-    label.textColor = tabItemColor(tabView.selected);
+    label.textColor = BHTTabItemColor(tabView.selected);
     label.frame = CGRectMake(2.0, CGRectGetHeight(tabView.bounds) - 13.0,
                              MAX(0.0, CGRectGetWidth(tabView.bounds) - 4.0), 11.0);
     if (label.superview != tabView) [tabView addSubview:label];
     [tabView bringSubviewToFront:label];
 }
 
-%hook T1TabView
-
-- (void)setSelected:(BOOL)selected {
-    %orig(selected);
-    UILabel* label = objc_getAssociatedObject(self, &BHTLegacyTabLabelKey);
-    label.textColor = tabItemColor(selected);
-}
-
-- (void)layoutSubviews {
-    // Undo previous offset before the app lays out the icon again
-    UIView* glyph = self.transformContainer ?: self.imageView;
-    if ([objc_getAssociatedObject(glyph, &BHTLegacyTabGlyphShiftKey) boolValue]) {
-        glyph.center = CGPointMake(glyph.center.x, glyph.center.y + 5.0);
-        objc_setAssociatedObject(glyph, &BHTLegacyTabGlyphShiftKey, nil,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-    %orig;
-    BHTLayoutLegacyTabLabel(self);
-    if ([BHTSettings boolForKey:@"restore_tab_labels"] && self.title.length &&
-        CGRectGetHeight(self.bounds) >= 34.0 && glyph) {
-        glyph.center = CGPointMake(glyph.center.x, glyph.center.y - 5.0);
-        objc_setAssociatedObject(glyph, &BHTLegacyTabGlyphShiftKey, @YES,
-                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    }
-}
-
-- (void)_t1_updateImageViewAnimated:(BOOL)animated {
-    if (updatingTabIconColor) return;
-    updatingTabIconColor = YES;
-    if ([BHTSettings boolForKey:@"tab_bar_theming"]) {
-        self.iconColor = tabItemColor(self.selected);
-    } else if (self.iconColor) {
-        self.iconColor = nil;
-    }
-    updatingTabIconColor = NO;
-    %orig(animated);
-    UILabel* label = objc_getAssociatedObject(self, &BHTLegacyTabLabelKey);
-    label.textColor = tabItemColor(self.selected);
-}
-
-- (void)applyTintColor:(UIColor*)color {
-    if ([BHTSettings boolForKey:@"tab_bar_theming"]) {
-        %orig(tabItemColor(self.selected));
-    } else {
-        %orig(color);
-    }
-}
-
-- (void)didMoveToWindow {
-    %orig;
-
-    if (self.window) {
-        [self setNeedsLayout];
-    }
-}
-
-%end
-
 // MARK: - Top bar logo theming
-
-%hook _TtC11TwitterHome39HomeDefaultNavigationBarTitleViewPlugin
-
-- (UIView*)titleView {
-    UIView* titleView = %orig;
-
-    if ([BHTSettings boolForKey:@"color_twitter_icon_in_top_bar"] &&
-        [titleView isKindOfClass:[UIImageView class]]) {
-        UIImageView* logoView = (UIImageView*)titleView;
-        if (logoView.image) {
-            logoView.image = [logoView.image imageWithRenderingMode:UIImageRenderingModeAlwaysTemplate];
-            logoView.tintColor = CurrentAccentColor();
-            BHTMarkAccentTintedIcon(logoView, YES);
-        }
-    }
-
-    return titleView;
-}
-
-%end
 
 // MARK: - iPad sidebar logo theming
 
-static void ApplySidebarIconTheme(UIViewController* sidebar) {
+void BHTApplySidebarIconTheme(UIViewController* sidebar) {
     Ivar iconViewIvar =
-        class_getInstanceVariable(%c(T1AppSplitSideBarViewController), "_iconView");
+        class_getInstanceVariable(NSClassFromString(@"T1AppSplitSideBarViewController"), "_iconView");
     if (!iconViewIvar) {
         return;
     }
@@ -1101,16 +584,106 @@ static void ApplySidebarIconTheme(UIViewController* sidebar) {
     BHTMarkAccentTintedIcon(iconView, wantsAccent);
 }
 
-%hook T1AppSplitSideBarViewController
+#pragma mark - Hook entry points
 
-- (void)viewDidLoad {
-    %orig;
-    ApplySidebarIconTheme(self);
+UIColor* BHTThemePrimaryColor(id palette, UIColor* native) {
+    objc_setAssociatedObject(palette, &BHTNativePrimaryColorKey, native,
+                             OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    return selectedCustomThemeColor() ?: native;
 }
 
-- (void)viewWillLayoutSubviews {
-    %orig;
-    ApplySidebarIconTheme(self);
+UIColor* BHTThemeLoadedColor(id loader, NSString* name, UIColor* color) {
+    if (BHTMappingLoadedColor || !selectedCustomThemeColor() ||
+        ![name isKindOfClass:NSString.class] ||
+        [name isEqualToString:@"primaryColor"] ||
+        [name hasPrefix:@"primaryColorOption"]) return color;
+
+    BHTMappingLoadedColor = YES;
+    Ivar paletteField = class_getInstanceVariable(object_getClass(loader), "_palette");
+    id palette = paletteField ? object_getIvar(loader, paletteField) : nil;
+    UIColor* native = objc_getAssociatedObject(palette, &BHTNativePrimaryColorKey);
+    if (!native && palette &&
+        [palette respondsToSelector:@selector(primaryColor)]) {
+        // The palette getter records the original color before substituting.
+        ((id (*)(id, SEL))objc_msgSend)(palette, @selector(primaryColor));
+        native = objc_getAssociatedObject(palette, &BHTNativePrimaryColorKey);
+    }
+    UIColor* mapped = BHTReplaceKnownAccent(color, native);
+    BHTMappingLoadedColor = NO;
+    return mapped;
 }
 
-%end
+UIColor* BHTThemeDynamicColor(UIColor* color, UIColor* resolved) {
+    if (BHTMappingDynamicColor || !selectedCustomThemeColor()) return resolved;
+    id identifier = [color respondsToSelector:@selector(tfn_dynamicColorIdentifier)]
+                        ? [color tfn_dynamicColorIdentifier]
+                        : nil;
+    // The picker reads these six tokens directly; they are previews, not the
+    // active accent, even when the selected option is custom.
+    if ([identifier isKindOfClass:NSString.class] &&
+        [identifier hasPrefix:@"primaryColorOption"]) return resolved;
+    BHTMappingDynamicColor = YES;
+    BOOL accentText = [identifier isKindOfClass:NSString.class] &&
+                      ([identifier isEqualToString:@"primaryColor"] ||
+                       [identifier isEqualToString:@"textLinkColor"]);
+    UIColor* mapped = accentText
+                          ? BHTReplaceNativeAccent(resolved, resolved)
+                          : BHTReplaceKnownAccent(resolved, BHTNativeAccentForCurrentPalette());
+    BHTMappingDynamicColor = NO;
+    return mapped;
+}
+
+id<TAEColorPalette> BHTThemeColorPalette(id info, id<TAEColorPalette> realPalette, BOOL isDark) {
+    if (selectedCustomThemeColor()) {
+        UIColor* native = objc_getAssociatedObject(realPalette, &BHTNativePrimaryColorKey);
+        if (!native && [(id)realPalette respondsToSelector:@selector(primaryColor)]) {
+            ((id (*)(id, SEL))objc_msgSend)(realPalette, @selector(primaryColor));
+            native = objc_getAssociatedObject(realPalette, &BHTNativePrimaryColorKey);
+        }
+        objc_setAssociatedObject(info, &BHTNativePrimaryColorKey, native,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    if (isDark && BHTDimThemeEnabled()) {
+        return (id<TAEColorPalette>)[BHTDimPaletteProxy proxyWithPalette:realPalette];
+    }
+    return realPalette;
+}
+
+UIColor* BHTThemeSystemBackground(UIColor* original, UIColor* dim) {
+    if (!BHTDimThemeEnabled()) return original;
+    return [UIColor colorWithDynamicProvider:^UIColor*(UITraitCollection* traits) {
+        return traits.userInterfaceStyle == UIUserInterfaceStyleDark ? dim : original;
+    }];
+}
+
+UIColor* BHTThemeResolvedBackground(UIColor* original, UITraitCollection* traits) {
+    if (!BHTDimThemeEnabled() || traits.userInterfaceStyle != UIUserInterfaceStyleDark) {
+        return original;
+    }
+    return BHTDimReplacementForResolvedColor(original) ?: original;
+}
+
+void BHTUpdateLegacyTabLabelColor(T1TabView* tabView, BOOL selected) {
+    UILabel* label = objc_getAssociatedObject(tabView, &BHTLegacyTabLabelKey);
+    label.textColor = BHTTabItemColor(selected);
+}
+
+UIView* BHTPrepareLegacyTabLayout(T1TabView* tabView) {
+    UIView* glyph = tabView.transformContainer ?: tabView.imageView;
+    if ([objc_getAssociatedObject(glyph, &BHTLegacyTabGlyphShiftKey) boolValue]) {
+        glyph.center = CGPointMake(glyph.center.x, glyph.center.y + 5.0);
+        objc_setAssociatedObject(glyph, &BHTLegacyTabGlyphShiftKey, nil,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+    return glyph;
+}
+
+void BHTFinishLegacyTabLayout(T1TabView* tabView, UIView* glyph) {
+    BHTLayoutLegacyTabLabel(tabView);
+    if ([BHTSettings boolForKey:@"restore_tab_labels"] && tabView.title.length &&
+        CGRectGetHeight(tabView.bounds) >= 34.0 && glyph) {
+        glyph.center = CGPointMake(glyph.center.x, glyph.center.y - 5.0);
+        objc_setAssociatedObject(glyph, &BHTLegacyTabGlyphShiftKey, @YES,
+                                 OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    }
+}
