@@ -60,8 +60,134 @@ jobs:
           echo "Upstream changed files:"
           cat /tmp/upstream-files.txt
 
-          while IFS=$'\t' read -r status path extra; do
+          while IFS=
+              M*)
+                mkdir -p "$(dirname "$path")"
+                local_tmp=$(mktemp)
+                base_tmp=$(mktemp)
+                remote_tmp=$(mktemp)
+                merged_tmp=$(mktemp)
+                cp "$path" "$local_tmp"
+                git show "$BASE:$path" > "$base_tmp"
+                git show "$TARGET:$path" > "$remote_tmp"
+                set +e
+                git merge-file -p "$local_tmp" "$base_tmp" "$remote_tmp" > "$merged_tmp"
+                rc=$?
+                set -e
+                mv "$merged_tmp" "$path"
+                rm -f "$local_tmp" "$base_tmp" "$remote_tmp"
+                if [ "$rc" -ne 0 ]; then
+                  echo "$path" >> UPSTREAM_MERGE_CONFLICTS.txt
+                  conflicts=$((conflicts + 1))
+                fi
+                ;;
+              A*)
+                mkdir -p "$(dirname "$path")"
+                git show "$TARGET:$path" > "$path"
+                ;;
+              D*)
+                base_sha=$(git rev-parse "$BASE:$path")
+                if [ -f "$path" ] && [ "$(git hash-object "$path")" != "$base_sha" ]; then
+                  echo "$path (upstream deleted, local modified)" >> UPSTREAM_MERGE_CONFLICTS.txt
+                  conflicts=$((conflicts + 1))
+                else
+                  rm -f "$path"
+                fi
+                ;;
+              R*|C*)
+                old_path="$path"
+                new_path="$extra"
+                mkdir -p "$(dirname "$new_path")"
+                if [ -f "$old_path" ]; then
+                  cp "$old_path" "$new_path"
+                  rm -f "$old_path"
+                else
+                  git show "$TARGET:$new_path" > "$new_path"
+                fi
+                echo "$new_path (rename/copy requires review)" >> UPSTREAM_MERGE_CONFLICTS.txt
+                conflicts=$((conflicts + 1))
+                ;;
+              *)
+                echo "$path (unsupported status $status)" >> UPSTREAM_MERGE_CONFLICTS.txt
+                conflicts=$((conflicts + 1))
+                ;;
+            esac
+          done < /tmp/upstream-files.txt
+
+          rm -f .upstream-sync-request
+          echo "conflicts=$conflicts" >> "$GITHUB_OUTPUT"
+
+          if [ "$conflicts" -gt 0 ]; then
+            echo "Three-way merge produced $conflicts conflict(s):"
+            cat UPSTREAM_MERGE_CONFLICTS.txt
+            echo
+            echo "Conflict marker excerpts:"
+            while IFS= read -r conflict; do
+              path=${conflict%% (*}
+              if [ -f "$path" ]; then
+                echo "===== $path ====="
+                grep -n -B 12 -A 20 '^<<<<<<<' "$path" || true
+              fi
+            done < UPSTREAM_MERGE_CONFLICTS.txt
+          else
+            rm -f UPSTREAM_MERGE_CONFLICTS.txt
+          fi
+
+      - name: Commit work result
+        env:
+          TARGET: ${{ steps.request.outputs.target }}
+          CONFLICTS: ${{ steps.merge.outputs.conflicts }}
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+
+          # Defense in depth: refuse to push if any local or incoming change
+          # somehow staged an Actions workflow. A separate reviewed change
+          # can update trusted workflows, never the upstream sync job.
+          if ! git diff --cached --quiet -- .github/workflows/; then
+            echo "Refusing to modify local GitHub Actions workflows during upstream sync:" >&2
+            git diff --cached --name-status -- .github/workflows/ >&2
+            exit 1
+          fi
+
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          if [ "$CONFLICTS" = "0" ]; then
+            git commit -m "[upstream-sync] apply NeoFreeBird ${TARGET}"
+          else
+            git commit -m "[upstream-sync] preserve ${CONFLICTS} merge conflicts for review"
+          fi
+          git push origin HEAD:${GITHUB_REF_NAME}
+
+      - name: Fail when manual merge is required
+        if: ${{ steps.merge.outputs.conflicts != '0' }}
+        run: |
+          echo "Upstream source was preserved on the work branch with conflict markers for manual review." >&2
+          exit 1
+\t' read -r status path extra; do
             [ -n "$status" ] || continue
+
+            # Never import upstream Actions definitions. Keep the local
+            # .github/workflows/ files under independent review and avoid
+            # needing a token with the separate Workflows write permission.
+            # Check both sides of rename/copy entries, including deletions.
+            # .gitignore alone does not protect already-tracked workflows.
+            case "$path" in
+              .github/workflows/*)
+                echo "Skipping upstream workflow ($status): $path"
+                continue
+                ;;
+            esac
+            case "${extra:-}" in
+              .github/workflows/*)
+                echo "Skipping upstream workflow ($status): $path -> $extra"
+                continue
+                ;;
+            esac
 
             case "$status" in
               M*)
