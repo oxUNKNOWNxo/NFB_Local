@@ -1,3 +1,0 @@
-BASE=d6b2bbfd438efbf20d056dfe0405547885a24be8
-TARGET=96ddcab55e58fa4d7f96224b0b2ee5ffe23a8ae4
-# Retry without new upstream workflow tests.yml; see .gitignore
