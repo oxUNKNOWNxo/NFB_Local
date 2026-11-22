@@ -1,5 +1,11 @@
 #import "AppLifecycle.h"
 
+// Single storage shared by the .m helpers and the Logos .x hooks.
+NSString* const testAlertVersionKey = @"nfb_test_alert_last_seen_version";
+BOOL testAlertScheduled = NO;
+BOOL padlockAuthenticated = NO;
+AuthViewController* padlockController = nil;
+
 // The launch animation reveals the app through a growing X-shaped mask
 // (revealMaskLayer / holePathInView); this keeps only the logo zoom
 
