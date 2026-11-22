@@ -1,6 +1,6 @@
+<div align="center">
+    <img src="resources/icon_rounded.png" alt="Twitter Bird Icon" width="130" height="130">
 
-<<<<<<< /tmp/tmp.AH0prKkTwW
-=======
 
   # NeoFreeBird
   <i>The ultimate way to tweak your Twitter/X experience.</i>
@@ -208,4 +208,3 @@ By default the IPA is rebranded in place. Pass `-o`/`--output` to write a rebran
 ```bash
 ./rebrand.sh -t --resource-pack theme.zip -o packages/Twitter-rebranded.ipa packages/NeoFreeBird-sideloaded.ipa
 ```
->>>>>>> /tmp/tmp.BM9okGqwGo
