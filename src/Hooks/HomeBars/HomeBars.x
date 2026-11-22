@@ -134,9 +134,7 @@ void applyHideForYouSetting(void) {
 
 // MARK: - Hide custom timelines
 
-static __weak NSObject* PinnedTimelinesRepository;
-static NSArray* LastPinnedTimelineModels;
-static BOOL PinnedTimelinesWriteBypass = NO;
+// Pinned-tab state is defined once by HomeBars.h for this compilation unit.
 
 // Applies a toggle without relaunching. Hiding rewrites the UNCHANGED pinned
 // list purely to republish — updatePinnedTimelines: persists server-side, so
