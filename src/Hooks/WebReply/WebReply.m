@@ -133,3 +133,12 @@ BOOL openAuthenticatedTweetWebView(NSString* statusID) {
 
     return YES;
 }
+
+
+// Personal builds always use X's native reply composer. Clear old opt-ins.
+BOOL NFBLocalWebReplyFallbackAllowed(void) {
+    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+    if ([defaults objectForKey:@"reply_in_webview"] != nil)
+        [defaults removeObjectForKey:@"reply_in_webview"];
+    return NO;
+}
