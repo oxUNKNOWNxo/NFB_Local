@@ -38,3 +38,6 @@ static NSString* const ReplyReadScript =
 TFNTwitterStatus* statusFromObject(id object);
 void showPostSentAlert(NSString* statusID);
 BOOL openAuthenticatedTweetWebView(NSString* statusID);
+
+// NFB_Local: web reply fallbacks are disabled to avoid X's anti-automation checks.
+BOOL NFBLocalWebReplyFallbackAllowed(void);
