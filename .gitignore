@@ -263,6 +263,7 @@ packages/
 
 deps/*/build/
 
-# Upstream CI test workflow is not imported automatically: the connected GitHub
-# App lacks workflow-write permission. Preserve existing trusted Actions workflows.
+# Defense in depth for the previously added upstream test workflow.
+# All upstream .github/workflows/** entries are excluded by the sync workflow
+# itself, including changes to already-tracked files, which .gitignore cannot protect.
 /.github/workflows/tests.yml
