@@ -7,6 +7,17 @@
 
 ---
 
+## 0. 2026-11-22 上流 GitHub Actions Workflow の同期を恒久的に除外
+
+- ユーザー明示依頼: 公式 `NeoFreeBird/app` の `.github/workflows/**` は**すべて自動同期対象外**にする。ローカルの信頼済み Actions Workflow は独立管理。アプリ本体のソース・翻訳の自動同期、`Validate work source`、`Package`、`Promote verified update`、日次確認タスクは継続する。
+- `.github/workflows/sync-upstream-source.yml` の `Apply upstream with three-way file merge` 処理に、`git diff --name-status` の各行について**元パスとrename/copy先パスの両方**を判定し `.github/workflows/*` をスキップする条件を追加。追加・変更・削除・移動・コピーに適用。`.gitignore` だけで既存tracked workflowは保護できないため同期ロジックで強制する。
+- 同じWorkflowのpush前に `git add -A` でstageされた差分の `.github/workflows/` を検査し、変更があればpushを拒否するフェイルセーフを追加。公式が今後テストWorkflowを追加しても書込権限を求めず、誤ってローカルのCI定義を上書きしない。
+- 既存の `/.github/workflows/tests.yml` ignoreは補助的なガードとして残す。上流のCIテストが必要なら自動取り込みではなく内容を審査して別途追加。余計なWorkflow書込権限やPATは付与しない。
+- **この変更は同期Workflowの安全設定のみ**。アプリのソース、バージョン7.3.12、TIPA、GitHub公開状態は変更しない。変更したWorkflowは次回の上流同期で実際に検証する。ローカルBashで変更／追加／削除／両方向rename／copy／通常ソースの判定テストは成功。
+- 当該変更コミット `a0445d4cf9357a76461a6528f57b06242993c50e`。今後の上流同期でこの除外条件を撤去してはならない。
+
+---
+
 
 ## 0. 2026-11-22 上流の大幅なモジュール再構成（NFB_Local 7.3.12）
 
