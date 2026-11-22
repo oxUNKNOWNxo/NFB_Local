@@ -1,13 +1,4 @@
-//
-//  HideUI.x
-//  NeoFreeBird
-//
-
-#import "HookHelpers.h"
-
-@interface T1ConversationFooterItem : NSObject
-@property (nonatomic, retain) NSNumber* viewCount;
-@end
+#import "HideUI.h"
 
 // MARK: - Hide Blue verified checkmark
 
@@ -43,18 +34,6 @@
 %end
 
 %hook TFSTwitterTypeaheadUser
-
-- (id)isBlueVerified {
-    return [BHTSettings boolForKey:@"hide_blue_verified"] ? nil : %orig;
-}
-
-- (BOOL)verified {
-    return [BHTSettings boolForKey:@"hide_blue_verified"] ? NO : %orig;
-}
-
-%end
-
-%hook TFSDirectMessageUser
 
 - (id)isBlueVerified {
     return [BHTSettings boolForKey:@"hide_blue_verified"] ? nil : %orig;
@@ -450,6 +429,70 @@ static BOOL NFBExploreCanMapToTrending(id collection) {
 
 - (BOOL)shouldBeVisibleForViewModel:(id)viewModel {
     return [BHTSettings boolForKey:@"hide_made_on_x"] ? NO : %orig;
+}
+
+%end
+
+// MARK: - Hide the Spaces bar
+
+// The bar is still the repurposed Fleets line; both home timeline implementations
+// share this visibility gate, re-evaluated on every content or settings update.
+%hook T1FleetLineHeaderController
+
+- (BOOL)_t1_shouldShowFleetLine {
+    if ([BHTSettings boolForKey:@"hide_spaces"]) {
+        return NO;
+    }
+
+    return %orig;
+}
+
+%end
+
+%hook _TtC14T1TwitterSwift28FleetLineAccessoryController
+
+- (BOOL)isHidden {
+    return [BHTSettings boolForKey:@"hide_spaces"] ? YES : %orig;
+}
+
+- (UIView*)accessoryView {
+    return [BHTSettings boolForKey:@"hide_spaces"] ? nil : %orig;
+}
+
+%end
+
+%hook TUIFollowControlCustomScreenshot
+- (void)didMoveToWindow {
+    %orig;
+    self.hidden = true;
+    self.alpha = 0.0;
+    self.userInteractionEnabled = false;
+}
+%end
+
+// MARK: Hide the refresh pill at the top of the page that appears when new tweets are available
+%hook TFNPillControl
+- (void)didMoveToWindow {
+    %orig;
+
+    if ([BHTSettings boolForKey:@"hide_timeline_prompts"]) {
+        self.userInteractionEnabled = NO;
+        self.hidden = YES;
+        self.alpha = 0.0;
+    }
+}
+
+%end
+
+%hook TFNFloatingActionButton
+- (void)didMoveToWindow {
+    %orig;
+
+    if ([BHTSettings boolForKey:@"hide_tweet_button"]) {
+        self.userInteractionEnabled = NO;
+        self.hidden = YES;
+        self.alpha = 0.0;
+    }
 }
 
 %end
