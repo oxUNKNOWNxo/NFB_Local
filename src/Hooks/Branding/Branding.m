@@ -1,5 +1,8 @@
 #import "Branding.h"
 
+// Share the thread-local recursion guard between Branding.m and Branding.x.
+__thread BOOL handlingTerminologyLocalization = NO;
+
 // MARK: - Recover host strings when a resource bundle lookup falls through
 //
 // X 12.33 has several toast paths which can ask the wrong NSBundle for a
