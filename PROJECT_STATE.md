@@ -1,9 +1,25 @@
 # NFB_Local — PROJECT_STATE
 
-最終更新: 2026-11-17 (JST)
+最終更新: 2026-11-22 (JST)
 
 このファイルは、ChatGPTの別チャットや将来の自動更新作業へ `NFB_Local` の状態・設計判断・既知問題を引き継ぐための基準資料。
 作業開始時は、まずこのファイルと現在の `main` を確認すること。
+
+---
+
+
+## 0. 2026-11-22 上流の大幅なモジュール再構成（NFB_Local 7.3.12）
+
+- ユーザー依頼によるアップデート。基準はローカル main `fb880b84f1258df476ec211c97de14b401612401` (7.3.11)、上流統合済み `d6b2bbfd438efbf20d056dfe0405547885a24be8`、新しい公式 v7 `96ddcab55e58fa4d7f96224b0b2ee5ffe23a8ae4`（19コミット差分）。最新公式release v7.3.1、ベースTwitter 12.39は維持。
+- 公式の大規模refactorにより `src/Hooks/*.x` が `src/Hooks/<Module>/<Module>.h/.m/.x` へ分割・再配置された。従来の単一ファイルを直接残すと重複実装や誤動作になるため、新ディレクトリへコードを移植した。古い `src/Hooks/AppLifecycle.x` / `HomeBars.x` / `WebReply.x` は撤去。
+- `HomeBars/HomeBars.x` はローカル7.3.11のFor Youのみ非表示（Followingと固定タブ維持）、起動時は必ずFollowing、前回タブ復元しない、固定リストが非同期到着しても最初の手動選択前のみ補正する実装を移植。上流 `HomeBars.m` にあったピン固定用ヘルパーは同ファイルに統合し二重定義を回避。メディア表示/Spacesのフックは上流の `MediaView` / `HideUI` に委ね二重フックを避ける。
+- `AppLifecycle/AppLifecycle.x` の本家起動処理より前に `prepareHomeTimelineFollowingForColdLaunch()`、個人向け `NFB_LOCAL_PRIVATE_BUILD` で本家配布元注意書きのみ抑止する条件を維持。`AppLifecycle.h/.m` の状態変数をexternal storageへ統一し、分割後の重複staticを解消。
+- `HideUI/HideUI.x` にopt-in `explore_trending_only` を移植。X 12.38.1/12.39以外は動作しない版判定と、元タブindex1を「トレンド」とみなす仕様を維持。実機での挙動は以前から未確認。
+- `Branding/Branding.m/.x` にローカルの `TwitterHostLocalizationFallbackForKey`（日本語が生キーになる時のフォールバック）を移植。上流の文言置換・再帰ガードを保持し、ガード変数を分割後も共有。Web返信の独自対策は `WebReply.m/.x` に再配置し、`reply_in_webview` の旧保存値をクリア、標準返信へ戻す。
+- 日本語/英語の `Localizable.strings` は最新版の節構造と既存7.3.11の表現を統合。独自キー `hide_for_you_tab`、`explore_trending_only` を保持。source validationは重複キー・日本語値と必要なUIフック検査を通過（run `44969003715`）。
+- upstreamが追加した `.github/workflows/tests.yml` はGitHub Appのworkflows書込権限がなく同期pushを拒否されたため、**取り込まず**現行信頼境界のActionsを維持。sync run `44968244251` のコミットでは実際のソース同期と51件の衝突記録をwork branchに保存。これらを手動で解決。バイナリのドキュメント用画像25ファイルは文字列マージによる破損を避けるためmainの既存画像を維持。自動のPackage/Promoteワークフローは改変せず、ソース検証workflowだけ新ディレクトリの実パスを検査するよう修正。
+- Public状態はユーザー指定で維持する。ソースのビルド成功は端末動作の実機確認とは別。特に起動時Following、設定ロゴ長押し、Trending only、ネイティブ返信、UI翻訳を試すこと。
+- Work: `automation/upstream-v7-work-20261122-refactor`。検証済み候補ready/Package/Promote/ReleaseはActionsの実行結果に記録する。
 
 ---
 
