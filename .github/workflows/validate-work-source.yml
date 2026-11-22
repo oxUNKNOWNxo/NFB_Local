@@ -51,21 +51,21 @@ jobs:
         run: |
           set -euo pipefail
           grep -Fq '@"key": @"hide_for_you_tab"' src/Core/BHTSettings.m
-          grep -Fq 'numberOfTabsIn:' src/Hooks/HomeBars.x
-          grep -Fq 'reloadDataWithSelectingIndex:' src/Hooks/HomeBars.x
-          grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars.x
-          grep -Fq 'prepareHomeTimelineFollowingForColdLaunch();' src/Hooks/AppLifecycle.x
-          grep -Fq 'prepareHomeTimelineFollowingForColdLaunch(void)' src/Hooks/HomeBars.x
+          grep -Fq 'numberOfTabsIn:' src/Hooks/HomeBars/HomeBars.x
+          grep -Fq 'reloadDataWithSelectingIndex:' src/Hooks/HomeBars/HomeBars.x
+          grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/HomeBars/HomeBars.x
+          grep -Fq 'prepareHomeTimelineFollowingForColdLaunch();' src/Hooks/AppLifecycle/AppLifecycle.x
+          grep -Fq 'prepareHomeTimelineFollowingForColdLaunch(void)' src/Hooks/HomeBars/HomeBars.x
           grep -Eq 'Version: [[:digit:]]+[.][[:digit:]]+[.][[:digit:]]+' control
 
       - name: Validate startup Following and private-build warning handling
         run: |
           set -euo pipefail
-          grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/Settings.x
-          grep -Fq 'HomeColdLaunchFollowingPending' src/Hooks/HomeBars.x
-          grep -Fq 'HomeColdLaunchUserSelectionEpoch' src/Hooks/HomeBars.x
-          grep -Fq 'ReloadHomeTimelineTabsAtIndex(strongSelf, HomeFollowingVisibleIndex())' src/Hooks/HomeBars.x
-          grep -Fq 'HomeFollowingVisibleIndex(void)' src/Hooks/HomeBars.x
+          grep -Fq 'attachNeoFreeBirdSettingsGesture' src/Hooks/Settings/Settings.m
+          grep -Fq 'HomeColdLaunchFollowingPending' src/Hooks/HomeBars/HomeBars.x
+          grep -Fq 'HomeColdLaunchUserSelectionEpoch' src/Hooks/HomeBars/HomeBars.x
+          grep -Fq 'ReloadHomeTimelineTabsAtIndex(strongSelf, HomeFollowingVisibleIndex())' src/Hooks/HomeBars/HomeBars.x
+          grep -Fq 'HomeFollowingVisibleIndex(void)' src/Hooks/HomeBars/HomeBars.x
           if grep -R -n -E 'applyRestoreHomeTabSelectionSetting|saveHomeTimelineSelectionBeforeResignActive|restoreHomeTimelineSelectionAfterBecomeActive|HomeSessionVisibleIndex' src; then
             echo 'Obsolete Home tab restoration code remains.' >&2
             exit 1
@@ -75,5 +75,5 @@ jobs:
             exit 1
           fi
           grep -Fq 'NFB_LOCAL_PRIVATE_BUILD=1' Makefile
-          grep -Fq '#if !defined(NFB_LOCAL_PRIVATE_BUILD)' src/Hooks/AppLifecycle.x
-          grep -Fq 'scheduleTestAlertIfNeeded();' src/Hooks/AppLifecycle.x
+          grep -Fq '#if !defined(NFB_LOCAL_PRIVATE_BUILD)' src/Hooks/AppLifecycle/AppLifecycle.x
+          grep -Fq 'scheduleTestAlertIfNeeded();' src/Hooks/AppLifecycle/AppLifecycle.x
