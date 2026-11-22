@@ -1,9 +1,9 @@
 #import "../HookHelpers.h"
 
-static NSString* const testAlertVersionKey = @"nfb_test_alert_last_seen_version";
-static BOOL testAlertScheduled = NO;
-static BOOL padlockAuthenticated = NO;
-static AuthViewController* padlockController = nil;
+extern NSString* const testAlertVersionKey;
+extern BOOL testAlertScheduled;
+extern BOOL padlockAuthenticated;
+extern AuthViewController* padlockController;
 UIWindow* activeKeyWindow(void);
 void showPadlockOverlay(void);
 void removePadlockOverlay(void);
