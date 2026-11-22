@@ -1,23 +1,10 @@
-//
-//  Settings.x
-//  NeoFreeBird
-//
-
-#import "Headers/XHeaders.h"
-#import "HookHelpers.h"
-
-// MARK: - NeoFreeBird settings entry
-
-static const void* SettingsEntryKey = &SettingsEntryKey;
-static const void* SettingsRootKey = &SettingsRootKey;
+#import "Settings.h"
 
 static BOOL isSettingsClass(UIViewController* viewController) {
     return [viewController isKindOfClass:objc_getClass("T1GenericSettingsViewController")] ||
            [viewController isKindOfClass:objc_getClass("T1SettingsViewController")];
 }
 
-// The generic controller backs the root and every sub-page alike, so the root is
-// the first settings-class controller in the navigation stack.
 static BOOL settingsVCIsRoot(TFNItemsDataViewController* settingsVC) {
     for (UIViewController* viewController in settingsVC.navigationController.viewControllers) {
         if (viewController == settingsVC) {
@@ -94,7 +81,7 @@ static NSArray* sectionsByInsertingEntry(TFNItemsDataViewController* settingsVC,
 // root-ness is unknowable during the first build (not yet on the nav stack). So
 // tag the root in viewWillAppear, insert once to repair the first build, and let
 // the rebuild transform below re-add the entry on every later snapshot.
-static void insertNeoFreeBirdSettingsIfRoot(TFNItemsDataViewController* settingsVC) {
+void insertNeoFreeBirdSettingsIfRoot(TFNItemsDataViewController* settingsVC) {
     if (!settingsVCIsRoot(settingsVC)) {
         return;
     }
@@ -108,8 +95,8 @@ static void insertNeoFreeBirdSettingsIfRoot(TFNItemsDataViewController* settings
     settingsVC.sections = sectionsByInsertingEntry(settingsVC, settingsVC.sections);
 }
 
-static NSArray* sectionsWithNeoFreeBirdEntry(TFNItemsDataViewController* settingsVC,
-                                             NSArray* sections) {
+NSArray* sectionsWithNeoFreeBirdEntry(TFNItemsDataViewController* settingsVC,
+                                      NSArray* sections) {
     if (!isSettingsClass(settingsVC)) {
         return sections;
     }
@@ -125,97 +112,17 @@ static NSArray* sectionsWithNeoFreeBirdEntry(TFNItemsDataViewController* setting
     return sectionsByInsertingEntry(settingsVC, sections);
 }
 
-%hook T1GenericSettingsViewController
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    insertNeoFreeBirdSettingsIfRoot(self);
-}
-%end
-
-%hook T1SettingsViewController
-- (void)viewWillAppear:(BOOL)animated {
-    %orig;
-    insertNeoFreeBirdSettingsIfRoot(self);
-}
-%end
-
-// Every sections rebuild runs through this transform right before setSections:,
-// so hooking it on the base class covers both settings roots.
-%hook TFNItemsDataViewController
-- (NSArray*)updatedSections:(NSArray*)sections forStyle:(NSInteger)style {
-    NSArray* updatedSections = %orig;
-    return sectionsWithNeoFreeBirdEntry(self, updatedSections);
-}
-%end
-
-// MARK: - NeoFreeBird settings gesture
-
-@interface NFBSettingsGesture : NSObject <UIGestureRecognizerDelegate>
-@property (nonatomic, weak) UIViewController* home;
-@end
-
-@implementation NFBSettingsGesture
-
-- (BOOL)homeIsVisible {
-    UIViewController* home = self.home;
-    UINavigationController* nav = home.navigationController;
-    if (!home.viewIfLoaded.window || !nav) {
-        return NO;
-    }
-
-    UIViewController* top = nav.topViewController;
-    for (UIViewController* vc = home; vc; vc = vc.parentViewController) {
-        if (vc == top) {
-            return YES;
-        }
-    }
-
-    return NO;
-}
-
-- (void)handleLongPress:(UILongPressGestureRecognizer*)press {
-    if (press.state != UIGestureRecognizerStateBegan || ![self homeIsVisible]) {
-        return;
-    }
-
-    UIImpactFeedbackGenerator* haptic =
-        [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleMedium];
-    [haptic impactOccurred];
-
-    id account = nil;
-    Class hostClass = objc_getClass("T1HostViewController");
-    if ([hostClass respondsToSelector:@selector(sharedHostViewController)]) {
-        id host = [hostClass sharedHostViewController];
-        if ([host respondsToSelector:@selector(currentAccount)]) {
-            account = [host currentAccount];
-        }
-    }
-
-    [self.home.navigationController pushViewController:[BHTManager BHTSettingsWithAccount:account]
-                                              animated:YES];
-}
-
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer*)gestureRecognizer {
-    return [self homeIsVisible];
-}
-
-- (BOOL)gestureRecognizer:(UIGestureRecognizer*)gestureRecognizer
-    shouldRecognizeSimultaneouslyWithGestureRecognizer:(UIGestureRecognizer*)other {
-    return YES;
-}
-
-@end
-
-static const void* SettingsGestureKey = &SettingsGestureKey;
-
 // Code lifted from nyaathea's Twitter tweak (now abandoned)
 void attachNeoFreeBirdSettingsGesture(UIViewController* home) {
-    UINavigationBar* bar = home.navigationController.navigationBar;
-    if (!bar) {
+    UIView* host = home.view.window;
+    if (!host) {
+        host = [UIApplication sharedApplication].keyWindow;
+    }
+    if (!host) {
         return;
     }
 
-    NFBSettingsGesture* target = objc_getAssociatedObject(bar, SettingsGestureKey);
+    NFBSettingsGesture* target = objc_getAssociatedObject(host, SettingsGestureKey);
     if (target) {
         target.home = home;
         return;
@@ -229,7 +136,7 @@ void attachNeoFreeBirdSettingsGesture(UIViewController* home) {
                                                       action:@selector(handleLongPress:)];
     press.cancelsTouchesInView = NO;
     press.delegate = target;
-    [bar addGestureRecognizer:press];
+    [host addGestureRecognizer:press];
 
-    objc_setAssociatedObject(bar, SettingsGestureKey, target, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    objc_setAssociatedObject(host, SettingsGestureKey, target, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 }

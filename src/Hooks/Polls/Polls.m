@@ -1,12 +1,4 @@
-//
-//  Polls.x
-//  NeoFreeBird
-//
-
-#import <string.h>
-#import "HookHelpers.h"
-
-static const NSUInteger BHTPollMaxChoices = 4;
+#import "Polls.h"
 
 // "choice2_label" -> 2, anything else -> 0.
 static NSUInteger BHTPollChoiceIndexForKey(NSString* key) {
@@ -39,9 +31,9 @@ static NSString* BHTPollPercentageString(double fraction) {
     return [formatter stringFromNumber:@(fraction)];
 }
 
-static NSString* BHTPollTitleWithPercentage(TFCCardData* cardData,
-                                            NSString* key,
-                                            NSString* title) {
+NSString* BHTPollTitleWithPercentage(TFCCardData* cardData,
+                                     NSString* key,
+                                     NSString* title) {
     NSUInteger choice = BHTPollChoiceIndexForKey(key);
     if (choice == 0 || choice > BHTPollMaxChoices || title.length == 0 ||
         ![BHTSettings boolForKey:@"show_poll_results"]) {
@@ -77,17 +69,3 @@ static NSString* BHTPollTitleWithPercentage(TFCCardData* cardData,
                                       BHTPollPercentageString((double)votes /
                                                               (double)total)];
 }
-
-%hook TFCCardData
-
-- (NSString*)stringForKey:(NSString*)key {
-    NSString* title = %orig;
-    return BHTPollTitleWithPercentage(self, key, title);
-}
-
-- (NSString*)stringForKey:(NSString*)key defaultValue:(NSString*)value {
-    NSString* title = %orig;
-    return BHTPollTitleWithPercentage(self, key, title);
-}
-
-%end
