@@ -14,8 +14,16 @@
     handlingTerminologyLocalization = YES;
     @try {
         NSString* result = %orig;
+        NSBundle* tweakBundle = [BHTBundle sharedBundle].mainBundle;
+        // NFB_Local: recover host UI strings whose resource lookup fell back
+        // to the raw key, even without terminology-renaming enabled.
+        if (self != tweakBundle && key.length > 0 &&
+            (result.length == 0 || [result isEqualToString:key])) {
+            NSString* fallback = TwitterHostLocalizationFallbackForKey(key);
+            if (fallback.length > 0) result = fallback;
+        }
         if (![BHTSettings boolForKey:@"restore_twitter_names"] ||
-            self == [BHTBundle sharedBundle].mainBundle) {
+            self == tweakBundle) {
             return result;
         }
 
