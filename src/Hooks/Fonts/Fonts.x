@@ -1,10 +1,4 @@
-//
-//  Fonts.x
-//  NeoFreeBird
-//
-
-#import "Headers/XHeaders.h"
-#import "HookHelpers.h"
+#import "Fonts.h"
 
 // MARK: - Change font
 
@@ -106,49 +100,6 @@
 }
 %end
 
-// The picked font name for a weight, or nil when the user runs Twitter's own.
-static NSString* CustomFontName(BOOL isBold) {
-    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
-    if (![defaults boolForKey:@"custom_fonts"]) {
-        return nil;
-    }
-    return [defaults objectForKey:isBold ? @"bhtwitter_font_2" : @"bhtwitter_font_1"];
-}
-
-static BOOL BHTFontIsBold(UIFont* font) {
-    if (!font) {
-        return NO;
-    }
-    NSString* name = font.fontName;
-    NSString* selectedBold = CustomFontName(YES);
-    if (selectedBold && [name isEqualToString:selectedBold]) {
-        return YES;
-    }
-    NSString* selectedRegular = CustomFontName(NO);
-    if (selectedRegular && [name isEqualToString:selectedRegular]) {
-        return NO;
-    }
-    if ([name containsString:@"Bold"] || [name containsString:@"Heavy"] ||
-        [name containsString:@"Black"] || [name containsString:@"Semibold"] ||
-        [name containsString:@"SemiBold"] || [name containsString:@"Demi"]) {
-        return YES;
-    }
-    if (font.fontDescriptor.symbolicTraits & UIFontDescriptorTraitBold) {
-        return YES;
-    }
-    NSDictionary* traits = font.fontDescriptor.fontAttributes[UIFontDescriptorTraitsAttribute];
-    NSNumber* weight = traits[UIFontWeightTrait];
-    return weight && weight.doubleValue >= UIFontWeightSemibold;
-}
-
-static UIFont* BHTReplaceFont(UIFont* originalFont, BOOL isBold) {
-    NSString* customName = CustomFontName(isBold);
-    if (!customName || !originalFont || [originalFont.fontName isEqualToString:customName]) {
-        return originalFont;
-    }
-    return [UIFont fontWithName:customName size:originalFont.pointSize] ?: originalFont;
-}
-
 %hook UIFont
 
 + (UIFont*)tfn_fontWithName:(NSString*)name size:(CGFloat)size {
@@ -156,6 +107,41 @@ static UIFont* BHTReplaceFont(UIFont* originalFont, BOOL isBold) {
     BOOL isBold = [name containsString:@"Bold"] || [name containsString:@"Heavy"] ||
                   [name containsString:@"Black"] || [name containsString:@"Semibold"];
     return BHTReplaceFont(originalFont, isBold);
+}
+
+- (id)tfn_CTFont {
+    id ctFont = %orig;
+    if (!ctFont || ctFont == self) {
+        return ctFont;
+    }
+    // X's -[UIFont(TFNUIFontGroup) tfn_CTFont] backs named fonts with a
+    // static NSCache (countLimit = 3) and returns the CTFont unretained:
+    // the cache is the sole owner. Once regular AND bold custom fonts are
+    // both set, a single tweet detail view creates 4+ "name-size"
+    // combinations, the cache evicts an in-use CTFont, and the next
+    // addAttribute: crashes in attributeDictionaryHash (#269).
+    // Pin the CTFonts of the user's custom fonts for the process lifetime.
+    NSString* regularName = CustomFontName(NO);
+    NSString* boldName = CustomFontName(YES);
+    BOOL isCustom = (regularName && [self.fontName isEqualToString:regularName]) ||
+                    (boldName && [self.fontName isEqualToString:boldName]);
+    if (!isCustom) {
+        return ctFont;
+    }
+    static NSMutableDictionary* pinnedCTFonts = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        pinnedCTFonts = [NSMutableDictionary new];
+    });
+    // Same "name-size" key format X's NSCache uses, so each distinct
+    // combination is pinned exactly once.
+    NSString* key = [NSString stringWithFormat:@"%@-%@", self.fontName, @(self.pointSize)];
+    @synchronized(pinnedCTFonts) {
+        if (!pinnedCTFonts[key]) {
+            pinnedCTFonts[key] = ctFont;
+        }
+    }
+    return ctFont;
 }
 
 %end
@@ -201,85 +187,24 @@ static UIFont* BHTReplaceFont(UIFont* originalFont, BOOL isBold) {
 
 %end
 
-static UIBarButtonItemAppearance* BHTBarButtonAppearanceWithFont(
-    UIBarButtonItemAppearance* originalAppearance, NSString* fontName) {
-    if (!originalAppearance || !fontName) {
-        return originalAppearance;
-    }
+%hook _TtC11XNavigation22NavigationBarTitleView
 
-    UIBarButtonItemAppearance* appearance = [originalAppearance copy];
-    for (UIBarButtonItemStateAppearance* state in
-         @[appearance.normal, appearance.highlighted, appearance.disabled, appearance.focused]) {
-        NSMutableDictionary* attributes =
-            [state.titleTextAttributes mutableCopy] ?: [NSMutableDictionary dictionary];
-        UIFont* existingFont = attributes[NSFontAttributeName];
-        UIFont* customFont = [UIFont fontWithName:fontName
-                                             size:existingFont ? existingFont.pointSize : 17.0];
-        if (customFont) {
-            attributes[NSFontAttributeName] = customFont;
-            state.titleTextAttributes = attributes;
+- (void)layoutSubviews {
+    for (NSString* name in @[@"titleLabel", @"subtitleLabel"]) {
+        id value = objectIvar(self, name.UTF8String);
+        if (![value isKindOfClass:[UILabel class]]) {
+            continue;
+        }
+
+        UILabel* label = value;
+        UIFont* originalFont = label.font;
+        UIFont* customFont =
+            BHTReplaceFont(originalFont, BHTFontIsBold(originalFont));
+        if (customFont != originalFont) {
+            label.font = customFont;
         }
     }
-    return appearance;
-}
-
-static UINavigationBarAppearance* BHTNavigationAppearanceWithFonts(
-    UINavigationBarAppearance* originalAppearance) {
-    if (!originalAppearance) {
-        return nil;
-    }
-
-    NSString* boldName = CustomFontName(YES);
-    NSString* regularName = CustomFontName(NO);
-    if (!boldName && !regularName) {
-        return originalAppearance;
-    }
-
-    UINavigationBarAppearance* appearance = [originalAppearance copy];
-    if (boldName) {
-        NSMutableDictionary* attributes =
-            [appearance.titleTextAttributes mutableCopy] ?: [NSMutableDictionary dictionary];
-        UIFont* existingFont = attributes[NSFontAttributeName];
-        UIFont* customFont = [UIFont fontWithName:boldName
-                                             size:existingFont ? existingFont.pointSize : 17.0];
-        if (customFont) {
-            attributes[NSFontAttributeName] = customFont;
-            appearance.titleTextAttributes = attributes;
-        }
-        appearance.doneButtonAppearance =
-            BHTBarButtonAppearanceWithFont(appearance.doneButtonAppearance, boldName);
-    }
-    if (regularName) {
-        appearance.buttonAppearance =
-            BHTBarButtonAppearanceWithFont(appearance.buttonAppearance, regularName);
-        appearance.backButtonAppearance =
-            BHTBarButtonAppearanceWithFont(appearance.backButtonAppearance, regularName);
-    }
-    return appearance;
-}
-
-%hook XNAVNavigationController
-
-- (void)viewDidLoad {
     %orig;
-
-    UINavigationBar* navigationBar = self.navigationBar;
-    navigationBar.standardAppearance =
-        BHTNavigationAppearanceWithFonts(navigationBar.standardAppearance);
-    if (navigationBar.scrollEdgeAppearance) {
-        navigationBar.scrollEdgeAppearance =
-            BHTNavigationAppearanceWithFonts(navigationBar.scrollEdgeAppearance);
-    }
-    if (navigationBar.compactAppearance) {
-        navigationBar.compactAppearance =
-            BHTNavigationAppearanceWithFonts(navigationBar.compactAppearance);
-    }
-    if (@available(iOS 15.0, *)) {
-        if (navigationBar.compactScrollEdgeAppearance) {
-            navigationBar.compactScrollEdgeAppearance =
-                BHTNavigationAppearanceWithFonts(navigationBar.compactScrollEdgeAppearance);
-        }
-    }
 }
 
 %end
