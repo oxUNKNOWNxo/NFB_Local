@@ -6,6 +6,8 @@
 
 - (_Bool)application:(__unsafe_unretained UIApplication*)application
     didFinishLaunchingWithOptions:(__unsafe_unretained id)arg2 {
+    // NFB_Local: clear X's previous pinned-list selection before home starts.
+    prepareHomeTimelineFollowingForColdLaunch();
     _Bool orig = %orig;
 
     [BHTManager cleanCache];
@@ -46,7 +48,11 @@
         removePadlockOverlay();
     }
 
+    // Personal TrollStore builds suppress only NeoFreeBird's download-origin
+    // reminder; authentication and other host warnings remain unchanged.
+#if !defined(NFB_LOCAL_PRIVATE_BUILD)
     scheduleTestAlertIfNeeded();
+#endif
 }
 
 - (void)applicationWillResignActive:(__unsafe_unretained id)arg1 {
