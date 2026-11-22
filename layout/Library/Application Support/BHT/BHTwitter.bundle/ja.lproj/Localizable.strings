@@ -15,13 +15,13 @@
 "HIDE_PREMIUM_OFFER_DETAIL" = "「認証を受ける」や「アップグレード」などのボタンを非表示にします。";
 "NO_TAB_BAR_HIDING_TITLE" = "ナビゲーションバーを常に表示";
 "NO_TAB_BAR_HIDING_DETAIL" = "スクロールしてもナビゲーションバーが消えないようにします。";
-"DISABLE_RTL_TITLE" = "LTRのレイアウトを使用";
+"DISABLE_RTL_TITLE" = "左から右（LTR）のレイアウトを使用";
 "DISABLE_RTL_DETAIL" = "右から左に読む言語の場合でも、左から右へのレイアウトを強制します。";
 "NO_FOCUS_LOST_TITLE" = "フォーカスを維持";
 "NO_FOCUS_LOST_DETAIL" = "別のアプリに切り替えたことをXが検知するのをブロックするため、スレッド内で読んでいた位置を見失うことがなくなります。";
 "SHOW_SCROLL_INDICATOR_TITLE" = "スクロールバーを常に表示";
 "IPAD_SPLIT_VIEW_TITLE" = "iPadの分割表示を有効にする";
-"IPAD_SPLIT_VIEW_DETAIL" = "iPad（およびiPhone Duo）でTwitterを分割表示で使用できるようになります。これにより、画面の片側でツイートを開いたまま、もう片側でタイムラインを表示しておくことができます。";
+"IPAD_SPLIT_VIEW_DETAIL" = "iPad（およびiPhone Duo）でXを分割表示できます。片側でポストを開き、もう片側でタイムラインを表示できます。";
 
 /* appearance */
 
@@ -46,95 +46,15 @@
 
 "MODERN_SETTINGS_TIMELINES_TITLE" = "タイムライン";
 "MODERN_SETTINGS_TIMELINES_SUBTITLE" = "広告やおすすめアカウントなど、タイムラインに表示したくない項目を非表示にできます。";
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-
-"MODERN_SETTINGS_GROK_TITLE" = "Grok";
-"MODERN_SETTINGS_GROK_SUBTITLE" = "Grokボタンの非表示や自動翻訳など、Grokに関する設定を変更できます。";
-
-"MODERN_SETTINGS_PROFILES_TITLE" = "プロフィール";
-"MODERN_SETTINGS_PROFILES_SUBTITLE" = "ユーザープロフィールに表示される項目をカスタマイズできます。";
-
-"MODERN_SETTINGS_TWEETS_TITLE" = "ポストと返信";
-"MODERN_SETTINGS_TWEETS_SUBTITLE" = "ポストの表示方法を変更したり、使用しない機能を非表示にしたりできます。";
-
-"MODERN_SETTINGS_CHAT_TITLE" = "チャット";
-"MODERN_SETTINGS_CHAT_SUBTITLE" = "チャットのインターフェースに機能を追加できます。";
-
-"MODERN_SETTINGS_SEARCH_TITLE" = "探索と検索";
-"MODERN_SETTINGS_SEARCH_SUBTITLE" = "「話題を検索」タブに表示される内容をカスタマイズできます。";
-
-"MODERN_SETTINGS_PRESETS_TITLE" = "プリセット";
-"MODERN_SETTINGS_PRESETS_SUBTITLE" = "あらかじめ用意された設定を適用したり、独自の設定をエクスポート・インポートしたりできます。";
-
-"MODERN_SETTINGS_WEB_TITLE" = "ウェブとリンク";
-"MODERN_SETTINGS_WEB_SUBTITLE" = "リンクの開き方やXのアプリ内ブラウザの動作を変更できます。";
-
-"MODERN_SETTINGS_BRANDING_TITLE" = "ブランド";
-"MODERN_SETTINGS_BRANDING_SUBTITLE" = "Xのブランド表記を旧Twitterのものに戻す範囲を設定できます。";
-
-"MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "実験的機能";
-"MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "現在テスト中の実験的な機能を利用できます。";
-
-/* Liquid Glass (experimental) */
-
-"MODERN_SETTINGS_DEBUG_TITLE" = "デバッグ";
-"MODERN_SETTINGS_DEBUG_SUBTITLE" = "機能が正常に動作しない原因を調査できます。";
-
-"COOL_KIDS_SECTION_HEADER_TITLE" = "クールな仲間たち";
-"SPECIAL_THANKS_SECTION_HEADER_TITLE" = "特別な感謝";
-"FOLLOW_OFFICIAL_PAGE_SECTION_HEADER_TITLE" = "NeoFreeBirdをフォロー";
-
-/*General*/
-
 "HIDE_WHO_TO_FOLLOW_TITLE" = "「おすすめアカウント」を非表示";
 "HIDE_WHO_TO_FOLLOW_DETAIL" = "フォロー候補として表示されるアカウントを非表示にします。";
-
-"NO_FOCUS_LOST_TITLE" = "フォーカスを維持";
-"NO_FOCUS_LOST_DETAIL" = "別のアプリに切り替えたことをXが検知するのをブロックするため、スレッド内で読んでいた位置を見失うことがなくなります。";
-
-
-=======
-"HIDE_WHO_TO_FOLLOW_TITLE" = "「おすすめアカウント」を非表示";
-"HIDE_WHO_TO_FOLLOW_DETAIL" = "フォロー候補として表示されるアカウントを非表示にします。";
->>>>>>> /tmp/tmp.xxivb8zQzC
 "HIDE_TIMELINE_PROMPTS_TITLE" = "タイムラインの案内を非表示";
 "HIDE_TIMELINE_PROMPTS_DETAIL" = "「連絡先を追加」などの案内バナーを非表示にします。";
 "HIDE_VIDEOS_FOR_YOU_TITLE" = "「おすすめ動画」を非表示";
 "HIDE_VIDEOS_FOR_YOU_DETAIL" = "タイムライン上の「おすすめ動画」セクションを非表示にします。";
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-
-"HIDE_BLOCKED_RETWEETS_TITLE" = "私をブロック中ユーザーのRP非表示";
-"HIDE_BLOCKED_RETWEETS_DETAIL" = "あなたをブロックしているアカウントのリポストを非表示にします。";
-
-"PADLOCK_TITLE" = "Xをロック";
-"PADLOCK_DETAIL" = "Xを開く際にFace IDまたはパスコードによる認証を必要とします。";
-
-"BLOCK_LINK_TRACKING_TITLE" = "リンクの追跡をブロック";
-"BLOCK_LINK_TRACKING_DETAIL" = "t.coを経由せずにリンク先を直接開き、バックグラウンドでのt.coへの通信や広告クリックIDの付与を防ぎます。Twitterの危険なリンクに関する警告は表示されなくなります。";
-
-"STRIP_TRACKING_PARAMS_TITLE" = "追跡用パラメータを削除";
-"STRIP_TRACKING_PARAMS_DETAIL" = "開くリンクからutm_などの追跡用パラメータを取り除きます。";
-
-"NEW_INAPP_WEBVIEW_TITLE" = "アプリ内ブラウザを改善（ベータ版）";
-"NEW_INAPP_WEBVIEW_DETAIL" = "リンクを開く際に、Xの新しいアプリ内ブラウザを使用します。";
-
-"ALWAYS_OPEN_SAFARI_TITLE" = "外部ブラウザで開く";
-"ALWAYS_OPEN_SAFARI_DETAIL" = "リンクをSafari、またはデフォルトのブラウザで開きます。";
-
-"SHARING_DOMAIN_TITLE" = "共有ドメイン";
-
-/*Tweets*/
-"TWEET_TO_IMAGE_TITLE" = "ポストを画像として保存";
-"TWEET_TO_IMAGE_DETAIL" = "「共有」を長押しすると、ポストを画像として保存できます。";
-
-"LIKE_CONFIRM_TITLE" = "「いいね」を確認";
-"LIKE_CONFIRM_DETAIL" = "ポストに「いいね」をする前に確認ダイアログを表示します。";
-
-=======
 "HIDE_SPACES_TITLE" = "スペースを非表示";
 "HIDE_CUSTOM_TIMELINES_TITLE" = "カスタムタイムラインを非表示";
 "HIDE_CUSTOM_TIMELINES_DETAIL" = "ホームタイムラインのタブから「追加」ボタンを削除します。";
->>>>>>> /tmp/tmp.xxivb8zQzC
 "SHOW_QUOTE_NUMBERS_TITLE" = "引用数を表示";
 "SHOW_QUOTE_NUMBERS_DETAIL" = "ポストが受けた引用とリポストの数を表示します。";
 "SHOW_UNROUNDED_QUOTE_NUMBERS_TITLE" = "正確な引用数を表示";
@@ -151,45 +71,7 @@
 "HIDE_VERIFIED_TWEETS_DETAIL" = "タイムラインと返信から認証済みアカウントのポストを非表示にします。ただし、そのアカウントをフォローしている場合や、投稿者が同じスレッド内で返信している場合は除きます。";
 "RESTORE_REFRESH_SOUNDS_TITLE" = "引っ張って更新のサウンド";
 
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-"USE_TENOR_GIFS_TITLE" = "TenorのGIFを使用する";
-"USE_TENOR_GIFS_DETAIL" = "XのGIF（GIPHY）の代わりにTenorを使用します。Tenorのほうが選択肢が豊富です。";
-
-"TWEET_CONFIRM_TITLE" = "ポストを確認";
-"TWEET_CONFIRM_DETAIL" = "ポストする前に確認ダイアログを表示します。";
-
-"SHOW_POLL_RESULTS_TITLE" = "投票前に結果を表示";
-"SHOW_POLL_RESULTS_DETAIL" = "投票する前に各選択肢の投票結果を表示し、他のユーザーの投票状況を確認できるようにします。";
-
-"SHOW_ACCOUNT_LOCATION_TITLE" = "アカウントの登録地域を表示";
-"SHOW_ACCOUNT_LOCATION_DETAIL" = "ポストの下部に、投稿したアカウントの登録地域を表示します。";
-
-"HIDE_BLUE_VERIFIED_TITLE" = "Premiumの認証済みバッジを非表示";
-"HIDE_BLUE_VERIFIED_DETAIL" = "ポストに表示される、Premiumによる認証済みバッジを非表示にします。ブランドアカウントや政府アカウントは対象外です。";
-
-"HIDE_VIEW_COUNT_TITLE" = "表示回数を非表示";
-"HIDE_VIEW_COUNT_DETAIL" = "ポストの下に表示される表示回数を非表示にします。";
-
-"DISABLE_MEDIA_CAROUSEL_TITLE" = "ポスト内のメディアをグリッド表示";
-"DISABLE_MEDIA_CAROUSEL_DETAIL" = "ポスト内のメディアをカルーセルではなく、グリッド一覧で表示します。";
-
-"HIDE_MEDIA_PREVIEWS_TITLE" = "メディアのプレビューを非表示";
-"HIDE_MEDIA_PREVIEWS_DETAIL" = "タイムライン上の写真、動画、GIFを非表示にします。（省データモード）";
-
-"HIDE_BOOKMARK_BUTTON_TITLE" = "ブックマークボタンを非表示";
-"HIDE_BOOKMARK_BUTTON_DETAIL" = "ポストに表示されるブックマークボタンを非表示にします。";
-"HIDE_DOWNVOTE_BUTTON_TITLE" = "低評価ボタンを非表示";
-"HIDE_DOWNVOTE_BUTTON_DETAIL" = "ポストに表示される低評価ボタンを非表示にします。";
-"HIDE_MADE_ON_X_TITLE" = "「Made on X」を非表示";
-"HIDE_MADE_ON_X_DETAIL" = "ポストに表示される「Made on X」のラベルを非表示にします。";
-
-"DISABLE_SENSITIVE_TWEET_WARNINGS_TITLE" = "センシティブ警告を非表示";
-
-"BYPASS_AGE_VERIFICATION_TITLE" = "年齢確認をスキップ";
-"BYPASS_AGE_VERIFICATION_DETAIL" = "センシティブなコンテンツを表示する際の年齢確認をスキップします。";
-=======
 /* grok */
->>>>>>> /tmp/tmp.xxivb8zQzC
 
 "MODERN_SETTINGS_GROK_TITLE" = "Grok";
 "MODERN_SETTINGS_GROK_SUBTITLE" = "Grokボタンの非表示や自動翻訳など、Grokに関する設定を変更できます。";
@@ -200,21 +82,7 @@
 "DISABLE_AUTO_TRANSLATE_TITLE" = "自動翻訳を無効にする";
 "DISABLE_AUTO_TRANSLATE_DETAIL" = "ポストやプロフィールを自動的に翻訳しないようにします。";
 
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-"SQUARE_AVATARS_TITLE" = "正方形のプロフィール画像";
-"SQUARE_AVATARS_DETAIL" = "旧Twitterのように、ブランドアカウントのような正方形のプロフィール画像を全員に適用します。";
-
-"REPLY_SORTING_TITLE" = "リプライの並べ替えを無効にする";
-"REPLY_SORTING_DETAIL" = "ツイートの返信欄にある並べ替えボタンを非表示にします。";
-
-"DEFAULT_REPLY_SORTING_TITLE" = "リプライの既定の並べ替え";
-"DEFAULT_REPLY_SORTING_DETAIL" = "すべてのツイートで使用するリプライの既定の並べ替え順を選択します。";
-
-"RESTORE_REPLY_CONTEXT_TITLE" = "返信コンテキストを復元";
-"RESTORE_REPLY_CONTEXT_DETAIL" = "ポストの下に、そのポストへの返信先を表示します。";
-=======
 /* media_downloads */
->>>>>>> /tmp/tmp.xxivb8zQzC
 
 "MODERN_SETTINGS_MEDIA_TITLE" = "画像と動画";
 "MODERN_SETTINGS_MEDIA_SUBTITLE" = "動画のダウンロードやタイムスタンプの表示など、メディアに関する設定を変更できます。";
@@ -296,7 +164,7 @@
 "HIDE_DOWNVOTE_BUTTON_TITLE" = "低評価ボタンを非表示";
 "HIDE_DOWNVOTE_BUTTON_DETAIL" = "ポストに表示される低評価ボタンを非表示にします。";
 "HIDE_MADE_ON_X_TITLE" = "「Made on X」を非表示";
-"HIDE_MADE_ON_X_DETAIL" = "ツイートから「Made on X」のラベルを削除します。";
+"HIDE_MADE_ON_X_DETAIL" = "ポストに表示される「Made on X」のラベルを非表示にします。";
 "USE_TENOR_GIFS_TITLE" = "TenorのGIFを使用する";
 "USE_TENOR_GIFS_DETAIL" = "XのGIF（GIPHY）の代わりにTenorを使用します。Tenorのほうが選択肢が豊富です。";
 "DISABLE_MEDIA_CAROUSEL_TITLE" = "ポスト内のメディアをグリッド表示";
@@ -314,44 +182,14 @@
 "CUSTOM_SEND_SOUND_DEFAULT" = "カスタムサウンドが選択されていません";
 "BYPASS_AGE_VERIFICATION_TITLE" = "年齢確認をスキップ";
 "BYPASS_AGE_VERIFICATION_DETAIL" = "センシティブなコンテンツを表示する際の年齢確認をスキップします。";
-"REPLY_SORTING_TITLE" = "返信の並べ替えを無効にする";
-"REPLY_SORTING_DETAIL" = "ポストの会話で返信の並び替えボタンを非表示にします。";
-"DEFAULT_REPLY_SORTING_TITLE" = "デフォルトの返信の並び替え";
-"DEFAULT_REPLY_SORTING_DETAIL" = "すべてのポストにおける返信のデフォルトの並び替え順を選択します。";
+"REPLY_SORTING_TITLE" = "リプライの並べ替えを無効にする";
+"REPLY_SORTING_DETAIL" = "ツイートの返信欄にある並べ替えボタンを非表示にします。";
+"DEFAULT_REPLY_SORTING_TITLE" = "リプライの既定の並べ替え";
+"DEFAULT_REPLY_SORTING_DETAIL" = "すべてのツイートで使用するリプライの既定の並べ替え順を選択します。";
 "RESTORE_REPLY_CONTEXT_TITLE" = "返信コンテキストを復元";
 "RESTORE_REPLY_CONTEXT_DETAIL" = "ポストの下に、そのポストへの返信先を表示します。";
 
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-"DIRECT_SAVE_TITLE" = "写真アプリに保存";
-"DIRECT_SAVE_DETAIL" = "ダウンロードした動画を「写真」アプリに直接保存します。";
-
-"HIDE_PREMIUM_OFFER_TITLE" = "Premiumの案内を非表示";
-"HIDE_PREMIUM_OFFER_DETAIL" = "「認証を受ける」や「アップグレード」などのボタンを非表示にします。";
-
-"THEME_OPTION_TITLE" = "テーマを変更";
-
-"APP_ICON_TITLE" = "アプリアイコンを変更";
-
-"CUSTOM_TAB_BAR_OPTION_TITLE" = "ナビゲーションバーを編集";
-
-/*Layout*/
-"HIDE_SPACES_TITLE" = "スペースを非表示";
-
-"NO_TAB_BAR_HIDING_TITLE" = "ナビゲーションバーを常に表示";
-"NO_TAB_BAR_HIDING_DETAIL" = "スクロールしてもナビゲーションバーが消えないようにします。";
-
-"HIDE_CUSTOM_TIMELINES_TITLE" = "カスタムタイムラインを非表示";
-"HIDE_CUSTOM_TIMELINES_DETAIL" = "ホームタイムラインのタブから「追加」ボタンを削除します。";
-
-"HIDE_FOR_YOU_TAB_TITLE" = "「おすすめ」タブを非表示";
-"HIDE_FOR_YOU_TAB_DETAIL" = "ホームから「おすすめ」タブだけを削除し、「フォロー中」と固定したタイムラインは残します。設定変更後はXを再起動してください。";
-
-
-
-"RESTORE_REFRESH_SOUNDS_TITLE" = "引っ張って更新のサウンド";
-=======
 /* search */
->>>>>>> /tmp/tmp.xxivb8zQzC
 
 "MODERN_SETTINGS_SEARCH_TITLE" = "探索と検索";
 "MODERN_SETTINGS_SEARCH_SUBTITLE" = "「話題を検索」タブに表示される内容をカスタマイズできます。";
@@ -362,18 +200,7 @@
 "HIDE_TREND_VIDEOS_TITLE" = "トレンド動画を非表示";
 "HIDE_TREND_VIDEOS_DETAIL" = "検索メニューに表示されるトレンド動画を非表示にします。";
 
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-"EXPLORE_TRENDING_ONLY_TITLE" = "「トレンド」のみ表示";
-"EXPLORE_TRENDING_ONLY_DETAIL" = "検索バーと「トレンド」を残し、ほかの話題カテゴリを非表示にします。「トレンドを非表示」より優先されます。変更後はXを再起動してください。";
-
-"TAB_BAR_THEMING_TITLE" = "クラシックなタブバーを使用";
-"TAB_BAR_THEMING_DETAIL" = "選択中のタブにアクセントカラーを適用し、従来のタブバーの外観にします。";
-
-"DISABLE_RTL_TITLE" = "左から右（LTR）のレイアウトを使用";
-"DISABLE_RTL_DETAIL" = "右から左に読む言語の場合でも、左から右へのレイアウトを強制します。";
-=======
 /* branding */
->>>>>>> /tmp/tmp.xxivb8zQzC
 
 "MODERN_SETTINGS_BRANDING_TITLE" = "ブランド";
 "MODERN_SETTINGS_BRANDING_SUBTITLE" = "Xのブランド表記を旧Twitterのものに戻す範囲を設定できます。";
@@ -392,21 +219,14 @@
 "MODERN_SETTINGS_PRESETS_SUBTITLE" = "あらかじめ用意された設定を適用したり、独自の設定をエクスポート・インポートしたりできます。";
 "SETTINGS_EXPORT_TITLE" = "設定のエクスポート";
 "SETTINGS_IMPORT_TITLE" = "設定のインポート";
-"SETTINGS_RESET_TITLE" = "設定のリセット";
+"SETTINGS_RESET_TITLE" = "設定をリセット";
 
 /* experimental */
 
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-/*Labs*/
-"REPLY_IN_WEBVIEW_TITLE" = "Web返信フォールバック（無効）";
-"REPLY_IN_WEBVIEW_DETAIL" = "X 12.33ではWeb返信が自動操作判定を受ける可能性があるため無効化しています。返信には通常のアプリ内返信画面を使用します。";
-
-=======
 "MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "実験的機能";
 "MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "現在テスト中の実験的な機能を利用できます。";
-"REPLY_IN_WEBVIEW_TITLE" = "ウェブビューで返信";
-"REPLY_IN_WEBVIEW_DETAIL" = "返信が送信できない場合の代替手段。アプリ内ではなくx.comで返信します。";
->>>>>>> /tmp/tmp.xxivb8zQzC
+"REPLY_IN_WEBVIEW_TITLE" = "Web返信フォールバック（無効）";
+"REPLY_IN_WEBVIEW_DETAIL" = "X 12.33ではWeb返信が自動操作判定を受ける可能性があるため無効化しています。返信には通常のアプリ内返信画面を使用します。";
 "LIQUID_GLASS_TITLE" = "リキッドグラスを有効にする";
 "LIQUID_GLASS_DETAIL" = "Xの新しいリキッドグラスインターフェイスを有効にします。これは実験的な再デザインであり、問題を引き起こす可能性があります。";
 
@@ -417,12 +237,12 @@
 "SHARING_DOMAIN_TITLE" = "共有ドメイン";
 "ALWAYS_OPEN_SAFARI_TITLE" = "外部ブラウザで開く";
 "ALWAYS_OPEN_SAFARI_DETAIL" = "リンクをSafari、またはデフォルトのブラウザで開きます。";
-"NEW_INAPP_WEBVIEW_TITLE" = "新アプリ内ブラウザ（beta版）";
+"NEW_INAPP_WEBVIEW_TITLE" = "アプリ内ブラウザを改善（ベータ版）";
 "NEW_INAPP_WEBVIEW_DETAIL" = "リンクを開く際に、Xの新しいアプリ内ブラウザを使用します。";
-"BLOCK_LINK_TRACKING_TITLE" = "リンク追跡のブロック";
-"BLOCK_LINK_TRACKING_DETAIL" = "t.coを経由せず、バックグラウンドでのt.coのリクエストや広告クリックIDなしで、リンクを直接開きます。Xの危険なリンクの警告は表示されなくなります。";
-"STRIP_TRACKING_PARAMS_TITLE" = "追跡パラメータの削除";
-"STRIP_TRACKING_PARAMS_DETAIL" = "開いたリンクからutm_などの追跡タグを取り除きます。";
+"BLOCK_LINK_TRACKING_TITLE" = "リンクの追跡をブロック";
+"BLOCK_LINK_TRACKING_DETAIL" = "t.coを経由せずにリンク先を直接開き、バックグラウンドでのt.coへの通信や広告クリックIDの付与を防ぎます。Twitterの危険なリンクに関する警告は表示されなくなります。";
+"STRIP_TRACKING_PARAMS_TITLE" = "追跡用パラメータを削除";
+"STRIP_TRACKING_PARAMS_DETAIL" = "開くリンクからutm_などの追跡用パラメータを取り除きます。";
 
 /* debug */
 
@@ -444,14 +264,14 @@
 "SAVE" = "保存";
 "SAVE_ACTION_LABEL" = "保存";
 "OK_ACTION_LABEL" = "OK";
-"COOL_KIDS_SECTION_HEADER_TITLE" = "イケてる仲間たち";
+"COOL_KIDS_SECTION_HEADER_TITLE" = "クールな仲間たち";
 "SPECIAL_THANKS_SECTION_HEADER_TITLE" = "特別な感謝";
 "TRANSLATOR_PAGE_SECTION_HEADER_TITLE" = "翻訳者";
 "FOLLOW_OFFICIAL_PAGE_SECTION_HEADER_TITLE" = "NeoFreeBirdをフォロー";
-"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@ リポスト: %@";
-"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld リポスト: %lld";
-"RESTORE_TWEET_LABELS_TITLE" = "ツイートのソースラベルを表示";
-"RESTORE_TWEET_LABELS_DETAIL" = "ツイートがどのクライアントから送信されたかを表示します。";
+"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@  リポスト: %@";
+"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リポスト: %lld";
+"RESTORE_TWEET_LABELS_TITLE" = "投稿元ラベルを表示";
+"RESTORE_TWEET_LABELS_DETAIL" = "ポストがどのクライアントから投稿されたかを表示します。";
 "LIQUID_GLASS_RESTART_ALERT_MESSAGE" = "リキッドグラスのデザイン変更を適用するには、再起動が必要です。";
 "DEVELOPER_SECTION_HEADER_TITLE" = "開発者";
 "CUSTOM_FONTS_NAVIGATION_BUTTON_TITLE" = "カスタムフォント";
@@ -462,15 +282,8 @@
 "DOWNLOAD_AS_GIF_OPTION_TITLE" = "GIFとしてダウンロード";
 "DOWNLOAD_AS_MP4_OPTION_TITLE" = "MP4としてダウンロード";
 "DOWNLOAD_ALL_VIDEOS_OPTION_TITLE" = "すべての動画をダウンロード";
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-
-/*App icon*/
-
-/*Copy profile info*/
-=======
-"APP_ICON_SETTINGS_MAC_ALERT_TITLE" = "アイコンの変更に失敗しました";
-"APP_ICON_SETTINGS_MAC_ALERT_MESSAGE" = "macOSではアイコンを変更できません。これはApple社の制限によるものです。";
->>>>>>> /tmp/tmp.xxivb8zQzC
+"APP_ICON_SETTINGS_MAC_ALERT_TITLE" = "アイコンの変更に失敗";
+"APP_ICON_SETTINGS_MAC_ALERT_MESSAGE" = "macOSではアイコンを変更できません。これはApple側の制限です。";
 "COPY_PROFILE_INFO_MENU_OPTION_1" = "プロフィールをコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_2" = "ユーザー名をコピー";
 "COPY_PROFILE_INFO_MENU_OPTION_3" = "名前をコピー";
@@ -532,22 +345,11 @@
 "Restore to default" = "デフォルトに戻す";
 "SUBSCRIPTION_UNDO_SEND_DURATION_TITLE" = "送信取り消し時間";
 "SUBSCRIPTION_UNDO_SEND_DURATION_DETAIL" = "ポスト送信後、送信取り消しボタンを表示しておく時間を選択します。";
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-
-/* Presets — settings import and export */
-"SETTINGS_EXPORT_TITLE" = "設定のエクスポート";
-"SETTINGS_IMPORT_TITLE" = "設定のインポート";
-
-
-"CUSTOM_SEND_SOUND_TITLE" = "送信音をインポート";
-"CUSTOM_SEND_SOUND_DEFAULT" = "カスタムサウンドが選択されていません";
-=======
 "SETTINGS_RESET_CONFIRM_TITLE" = "すべての設定をリセットしますか？";
-"SETTINGS_RESET_CONFIRM_MESSAGE" = "これにより、すべての NeoFreeBird の設定がデフォルトに戻ります。";
+"SETTINGS_RESET_CONFIRM_MESSAGE" = "NeoFreeBirdのすべての設定を初期値に戻します。";
 "SETTINGS_RESET_CONFIRM_BUTTON" = "リセット";
-"SETTINGS_RESET_SUCCESS_TITLE" = "設定がリセットされました";
-"SETTINGS_RESET_SUCCESS_MESSAGE" = "すべての設定が復元されました。すべての変更を適用するには、アプリを再起動してください。";
->>>>>>> /tmp/tmp.xxivb8zQzC
+"SETTINGS_RESET_SUCCESS_TITLE" = "設定をリセットしました";
+"SETTINGS_RESET_SUCCESS_MESSAGE" = "すべての設定を初期値に戻しました。変更を完全に反映するにはアプリを再起動してください。";
 "CUSTOM_SEND_SOUND_FAILED_TITLE" = "送信音のインポートに失敗しました";
 "CUSTOM_SEND_SOUND_TOO_LONG" = "選択したサウンドが長すぎます。7秒以内のサウンドを選択してください。";
 "SETTINGS_EXPORT_FAILED_TITLE" = "エクスポートに失敗しました";
@@ -560,18 +362,6 @@
 "SETTINGS_IMPORT_SUCCESS_MESSAGE" = "%ld件の設定が適用されました。すべての変更を有効にするにはアプリを再起動してください。";
 "SETTINGS_IMPORT_RESTART_BUTTON" = "再起動";
 "SETTINGS_IMPORT_LATER_BUTTON" = "あとで";
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-
-/* Reset settings */
-"SETTINGS_RESET_TITLE" = "設定をリセット";
-"SETTINGS_RESET_CONFIRM_TITLE" = "すべての設定をリセットしますか？";
-"SETTINGS_RESET_CONFIRM_MESSAGE" = "NeoFreeBirdのすべての設定を初期値に戻します。";
-"SETTINGS_RESET_CONFIRM_BUTTON" = "リセット";
-"SETTINGS_RESET_SUCCESS_TITLE" = "設定をリセットしました";
-"SETTINGS_RESET_SUCCESS_MESSAGE" = "すべての設定を初期値に戻しました。変更を完全に反映するにはアプリを再起動してください。";
-
-=======
->>>>>>> /tmp/tmp.xxivb8zQzC
 "SETTINGS_TRANSFER_UNREADABLE_FILE" = "ファイルを読み込めませんでした。";
 "SETTINGS_TRANSFER_MALFORMED_FILE" = "このファイルは NeoFreeBird の設定エクスポートファイルではありません。";
 "SETTINGS_TRANSFER_NO_SETTINGS" = "このファイルには、このバージョンで認識できる設定が含まれていませんでした。";
@@ -584,30 +374,14 @@
 "60 seconds" = "60秒";
 "GENERIC_OFF_LABEL" = "オフ";
 "SUBSCRIPTION_UNDO_SEND_DURATION_LABEL" = "%ld秒";
-<<<<<<< /tmp/tmp.Q2Btm8P0hy
-
-
-/* macOS app icon alert */
-"APP_ICON_SETTINGS_MAC_ALERT_TITLE" = "アイコンの変更に失敗";
-"APP_ICON_SETTINGS_MAC_ALERT_MESSAGE" = "macOSではアイコンを変更できません。これはApple側の制限です。";
-
-/*Post interaction counts / source labels (v7.2.0)*/
-"POST_INTERACTIONS_COUNTS_TITLE" = "引用: %@  リポスト: %@";
-"POST_INTERACTIONS_UNROUNDED_COUNTS_TITLE" = "引用: %lld  リポスト: %lld";
-"RESTORE_TWEET_LABELS_TITLE" = "投稿元ラベルを表示";
-"RESTORE_TWEET_LABELS_DETAIL" = "ポストがどのクライアントから投稿されたかを表示します。";
-
-/* v7 upstream settings and safety notice (2026-11-03) */
-"TRANSLATOR_PAGE_SECTION_HEADER_TITLE" = "翻訳者";
-"IPAD_SPLIT_VIEW_TITLE" = "iPadの分割表示を有効にする";
-"IPAD_SPLIT_VIEW_DETAIL" = "iPad（およびiPhone Duo）でXを分割表示できます。片側でポストを開き、もう片側でタイムラインを表示できます。";
 "GITHUB_DOWNLOAD_WARNING_TITLE" = "ようこそ！";
 "GITHUB_DOWNLOAD_WARNING_MESSAGE" = "NeoFreeBirdは公式GitHubからインストールしてください。非公式のIPAで発生した問題には対応できず、悪意のあるコードが含まれていないかも確認できません。ご質問がある場合は、GitHubでIssueを作成してください。";
-
-=======
-"GITHUB_DOWNLOAD_WARNING_TITLE" = "ようこそ！";
-"GITHUB_DOWNLOAD_WARNING_MESSAGE" = "NeoFreeBirdは必ず公式のGitHubからインストールしてください。他のIPAファイルに関する問題についてはサポートいたしかねます。また、お使いのバージョンに有害なコードが含まれていないか確認できません。ご不明な点がございましたら、GitHubでIssueを作成してください。";
->>>>>>> /tmp/tmp.xxivb8zQzC
 "COMPOSITION_COMPLETE_SENDING_TWEET_TOAST_NOTIFICATION_MESSAGE" = "返信が送信されました！";
 "DM_MESSAGE_ACTION_OPEN_GENERIC_TITLE" = "ポストを開く";
 "DISMISS_LABEL" = "閉じる";
+
+/* NFB_Local settings and existing translations retained from 7.3.11 */
+"HIDE_FOR_YOU_TAB_TITLE" = "「おすすめ」タブを非表示";
+"HIDE_FOR_YOU_TAB_DETAIL" = "ホームから「おすすめ」タブだけを削除し、「フォロー中」と固定したタイムラインは残します。設定変更後はXを再起動してください。";
+"EXPLORE_TRENDING_ONLY_TITLE" = "「トレンド」のみ表示";
+"EXPLORE_TRENDING_ONLY_DETAIL" = "検索バーと「トレンド」を残し、ほかの話題カテゴリを非表示にします。「トレンドを非表示」より優先されます。変更後はXを再起動してください。";
