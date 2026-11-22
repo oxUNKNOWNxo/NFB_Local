@@ -27,8 +27,6 @@
 #import "ThemeColor/Palette.h"
 #import "WebLogin/WebLoginViewController.h"
 
-<<<<<<< /tmp/tmp.bzMySVcoxO
-=======
 static NSString* const WebClientBearer = @"Bearer "
                                          @"AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puT"
                                          @"s%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA";
@@ -39,47 +37,42 @@ static NSString* const NativeClientBearer =
     @"3DVJQREvQNCZJNiz3rHO7lOXlkVOQkzzdsgu6wWgcazdMUaGoUGm";
 
 // Recursive view traversal (BHTHookHelpers.m)
->>>>>>> /tmp/tmp.YgCkfDcqyU
 void EnumerateSubviewsRecursively(UIView* view,
                                   void (^block)(UIView* currentView));
+
+// TFNDataViewItem unwrapping for timeline section filtering (BHTHookHelpers.m)
 id unwrapDataViewItem(id item);
+
+// Module header/footer cleanup for timeline section filtering (BHTHookHelpers.m)
 BOOL IsModuleHeaderItem(id item);
 BOOL IsModuleFooterItem(id item);
 void MarkEmptiedModuleChrome(NSArray* items, NSMutableIndexSet* removed);
+
+// Live square-avatar restyling (Avatars.x)
 void applySquareAvatarsSetting(void);
+
 NSString* formatNumberWithSuffix(long long number);
 
 bool NFBLiquidGlassEnabled(void);
 
-<<<<<<< /tmp/tmp.bzMySVcoxO
-// Custom theme color re-apply (Theme.x)
-void applySelectedThemeColor(void);
-void BHTApplyDimToVideoControls(UIView* controlsView);
-
-=======
->>>>>>> /tmp/tmp.YgCkfDcqyU
 // Long press on the home navigation bar opens NeoFreeBird settings (Settings.x)
 void attachNeoFreeBirdSettingsGesture(UIViewController* home);
 
 // Live pinned-tabs refresh when the hide setting is toggled (Timeline.x)
 void applyHideCustomTimelinesSetting(void);
+
+// NFB_Local: start on Following on every full launch and hide only For You.
 void prepareHomeTimelineFollowingForColdLaunch(void);
+void applyHideForYouSetting(void);
+
+// Whether the account genuinely has a panel's tab, ignoring the forced tab
+// gates (FeatureSwitches.x)
 BOOL panelIsGenuinelyAvailable(long long panelID);
-<<<<<<< /tmp/tmp.bzMySVcoxO
-void prewarmWebCookiesIfNeeded(void);
-void maybeHandleHarvestWebView(__unsafe_unretained id webViewController);
-id accountForAuthenticatedWebView(void);
-void webLoginDidCaptureCookies(NSString* userID, NSString* username,
-                               NSDictionary<NSString*, NSString*>* cookiePairs);
-BOOL isCookieLoginUserID(NSString* userID);
-NSDictionary* currentWebCredentials(void);
-=======
 
 // Web session and posting helpers.
 #import "WebCreateTweet/WebCreateTweet.h"
 
 BOOL boolIvar(id object, const char* name, BOOL fallback);
->>>>>>> /tmp/tmp.YgCkfDcqyU
 
 void setBoolIvar(id object, const char* name, BOOL value);
 
