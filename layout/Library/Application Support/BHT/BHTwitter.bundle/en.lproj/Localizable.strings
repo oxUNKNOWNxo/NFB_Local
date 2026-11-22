@@ -189,35 +189,7 @@
 "RESTORE_REPLY_CONTEXT_TITLE" = "Restore reply context";
 "RESTORE_REPLY_CONTEXT_DETAIL" = "Shows the people that are being replied to under Tweets.";
 
-<<<<<<< /tmp/tmp.lucWqNVFpw
-"DIRECT_SAVE_TITLE" = "Save to Photos";
-"DIRECT_SAVE_DETAIL" = "Videos you save will go straight to your Photos app.";
-
-"HIDE_PREMIUM_OFFER_TITLE" = "No Twitter Blue prompts";
-"HIDE_PREMIUM_OFFER_DETAIL" = "Remove the 'Get Verified' and 'Upgrade' buttons.";
-
-"THEME_OPTION_TITLE" = "Change theme";
-
-"APP_ICON_TITLE" = "Change app icon";
-
-"CUSTOM_TAB_BAR_OPTION_TITLE" = "Edit navigation bar";
-
-/*Layout*/
-"HIDE_SPACES_TITLE" = "Hide the Spaces bar";
-
-"NO_TAB_BAR_HIDING_TITLE" = "Keep the navigation bar visible";
-"NO_TAB_BAR_HIDING_DETAIL" = "Don't fade the navigation bar when you scroll.";
-
-"HIDE_CUSTOM_TIMELINES_TITLE" = "Hide custom timelines";
-"HIDE_CUSTOM_TIMELINES_DETAIL" = "Remove the Add button from the home timeline tabs.";
-
-"HIDE_FOR_YOU_TAB_TITLE" = "Hide the For You tab";
-"HIDE_FOR_YOU_TAB_DETAIL" = "Remove only the For You tab from Home while keeping Following and pinned timelines. Restart X after changing this setting.";
-
-"RESTORE_REFRESH_SOUNDS_TITLE" = "Pull-to-refresh sounds";
-=======
 /* search */
->>>>>>> /tmp/tmp.daiWdR4ErI
 
 "MODERN_SETTINGS_SEARCH_TITLE" = "Search and discover";
 "MODERN_SETTINGS_SEARCH_SUBTITLE" = "Change what you see in the Search tab.";
@@ -228,18 +200,7 @@
 "HIDE_TREND_VIDEOS_TITLE" = "No trending videos";
 "HIDE_TREND_VIDEOS_DETAIL" = "Remove the trending videos from the search menu.";
 
-<<<<<<< /tmp/tmp.lucWqNVFpw
-"EXPLORE_TRENDING_ONLY_TITLE" = "Show only Trending";
-"EXPLORE_TRENDING_ONLY_DETAIL" = "Keep Search and the Trending category, hiding other Explore tabs. Takes precedence over Hide trending content. Restart X to apply.";
-
-"TAB_BAR_THEMING_TITLE" = "Classic tab bar";
-"TAB_BAR_THEMING_DETAIL" = "Applies your accent color to the currently selected tab item.";
-
-"DISABLE_RTL_TITLE" = "Use left-to-right layout";
-"DISABLE_RTL_DETAIL" = "Force a a left-to-right layout, even for languages that are read from right-to-left.";
-=======
 /* branding */
->>>>>>> /tmp/tmp.daiWdR4ErI
 
 "MODERN_SETTINGS_BRANDING_TITLE" = "Branding";
 "MODERN_SETTINGS_BRANDING_SUBTITLE" = "Adjust how much of the Twitter branding reverts you see.";
@@ -262,17 +223,10 @@
 
 /* experimental */
 
-<<<<<<< /tmp/tmp.lucWqNVFpw
-/*Labs*/
-"REPLY_IN_WEBVIEW_TITLE" = "Web reply fallback (disabled)";
-"REPLY_IN_WEBVIEW_DETAIL" = "Disabled on X 12.33 because web replies can trigger X's anti-automation protection. Replies use the normal in-app composer.";
-
-=======
 "MODERN_SETTINGS_EXPERIMENTAL_TITLE" = "Labs";
 "MODERN_SETTINGS_EXPERIMENTAL_SUBTITLE" = "Try features we're currently testing.";
-"REPLY_IN_WEBVIEW_TITLE" = "Reply in web view";
-"REPLY_IN_WEBVIEW_DETAIL" = "Fallback if replies fail to send. Replies on x.com instead of in the app.";
->>>>>>> /tmp/tmp.daiWdR4ErI
+"REPLY_IN_WEBVIEW_TITLE" = "Web reply fallback (disabled)";
+"REPLY_IN_WEBVIEW_DETAIL" = "Disabled on X 12.33 because web replies can trigger X's anti-automation protection. Replies use the normal in-app composer.";
 "LIQUID_GLASS_TITLE" = "Enable Liquid Glass";
 "LIQUID_GLASS_DETAIL" = "Enables X's new Liquid Glass interface. This is an experimental redesign and may cause issues.";
 
@@ -426,3 +380,9 @@
 "COMPOSITION_COMPLETE_SENDING_TWEET_TOAST_NOTIFICATION_MESSAGE" = "Your reply has been sent!";
 "DM_MESSAGE_ACTION_OPEN_GENERIC_TITLE" = "Open Tweet";
 "DISMISS_LABEL" = "Dismiss";
+
+/* NFB_Local settings and existing translations retained from 7.3.11 */
+"HIDE_FOR_YOU_TAB_TITLE" = "Hide the For You tab";
+"HIDE_FOR_YOU_TAB_DETAIL" = "Remove only the For You tab from Home while keeping Following and pinned timelines. Restart X after changing this setting.";
+"EXPLORE_TRENDING_ONLY_TITLE" = "Show only Trending";
+"EXPLORE_TRENDING_ONLY_DETAIL" = "Keep Search and the Trending category, hiding other Explore tabs. Takes precedence over Hide trending content. Restart X to apply.";
