@@ -1,6 +1,6 @@
 #import "../HookHelpers.h"
 
-static __thread BOOL handlingTerminologyLocalization = NO;
+extern __thread BOOL handlingTerminologyLocalization;
 
 NSDictionary<NSString*, NSString*>* RenameKeyOverrides(void);
 NSString* PillLabelText(void);
