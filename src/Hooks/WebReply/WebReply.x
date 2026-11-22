@@ -8,7 +8,7 @@
                         scribeElement:(__unsafe_unretained id)scribeElement
                            parameters:(__unsafe_unretained id)parameters
                        originalStatus:(__unsafe_unretained TFNTwitterStatus*)originalStatus {
-    if (![BHTSettings boolForKey:@"reply_in_webview"]) {
+    if (!NFBLocalWebReplyFallbackAllowed()) {
         return %orig;
     }
 
@@ -30,7 +30,7 @@
 
 %hook T1PersistentComposeViewController
 - (void)persistentComposeViewDidTap:(id)composeView {
-    if (![BHTSettings boolForKey:@"reply_in_webview"]) {
+    if (!NFBLocalWebReplyFallbackAllowed()) {
         return %orig;
     }
 
