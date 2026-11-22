@@ -262,3 +262,7 @@ packages/
 !packages/PUT_IPA_HERE
 
 deps/*/build/
+
+# Upstream CI test workflow is not imported automatically: the connected GitHub
+# App lacks workflow-write permission. Preserve existing trusted Actions workflows.
+/.github/workflows/tests.yml
